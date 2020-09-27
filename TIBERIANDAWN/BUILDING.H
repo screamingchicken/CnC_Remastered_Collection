@@ -156,6 +156,13 @@ class BuildingClass : public TechnoClass
 		*/
 		TCountDownTimerClass PlacementDelay;
 
+		/*
+		**	#MinorAIFixes
+		**  Used to delay the SAM recessing into it's bunker so it can
+		**	acquire further targets
+		*/
+		int SAMLoweringDelay;
+
 		/*---------------------------------------------------------------------
 		**	Constructors, Destructors, and overloaded operators.
 		*/

@@ -190,6 +190,13 @@ bool Do_Reinforcements(TeamTypeClass *teamtype)
 						temp->IsALoaner = true;
 					}
 
+					/* #MinorAIFixes - Sets Reinforcement non-player Orca/Apaches to be Loaners so they can fly off-map when done */
+					if (temp->What_Am_I() == RTTI_AIRCRAFT && !HouseClass::As_Pointer(teamtype->House)->IsHuman) {
+						if (*((AircraftClass *)temp) == AIRCRAFT_HELICOPTER || *((AircraftClass *)temp) == AIRCRAFT_ORCA) {
+							temp->IsALoaner = true;
+						}
+					}
+
 					/*
 					**	Link to the list of normal objects.
 					*/

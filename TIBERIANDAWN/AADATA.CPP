@@ -126,7 +126,7 @@ static AircraftTypeClass const TransportHeli(
 	90,						// The strength of this unit.
 	0,							// The range that it reveals terrain around itself.
 	1500,						// Credit cost to construct.
-	98,						// The scenario this becomes available.
+	16,						// The scenario this becomes available. #MinorAIFixes
 	10,80,					// Risk, reward when calculating AI.
 	HOUSEF_MULTI1|
 	HOUSEF_MULTI2|

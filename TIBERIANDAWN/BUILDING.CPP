@@ -2195,11 +2195,13 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 				ScenarioInit--;
 			} else {
 				AircraftClass *air = (AircraftClass *)base;
-
+				/* #MinorAIFixes - gets new-build Orcas to fly in at the primary Helipad Y Location, rather than a random Y location */
 				if (Cell_X(Coord_Cell(Center_Coord())) - Map.MapCellX < Map.MapCellWidth/2) {
-					cell = XY_Cell(Map.MapCellX-1, Random_Pick(0, Map.MapCellHeight-1)+Map.MapCellY);
+//					cell = XY_Cell(Map.MapCellX-1, Random_Pick(0, Map.MapCellHeight-1)+Map.MapCellY);
+					cell = XY_Cell(Map.MapCellX - 1, Cell_Y(Coord_Cell(Center_Coord())));
 				} else {
-					cell = XY_Cell(Map.MapCellX+Map.MapCellWidth, Random_Pick(0, Map.MapCellHeight-1)+Map.MapCellY);
+//					cell = XY_Cell(Map.MapCellX+Map.MapCellWidth, Random_Pick(0, Map.MapCellHeight-1)+Map.MapCellY);
+					cell = XY_Cell(Map.MapCellX + Map.MapCellWidth, Cell_Y(Coord_Cell(Center_Coord())));
 				}
 				ScenarioInit++;
 				if (air->Unlimbo(Cell_Coord(cell), DIR_N)) {
@@ -4308,6 +4310,7 @@ int BuildingClass::Mission_Attack(void)
 				if (!Target_Legal(TarCom) || !Is_Target_Aircraft(TarCom) || As_Aircraft(TarCom)->Altitude == 0) {
 					Assign_Target(TARGET_NONE);
 					Status = SAM_LOCKING;
+					SAMLoweringDelay = 0;
 					return(TICKS_PER_SECOND);
 				} else {
 					if (!PrimaryFacing.Is_Rotating()) {
@@ -4328,11 +4331,13 @@ int BuildingClass::Mission_Attack(void)
 				if (!Target_Legal(TarCom) || !Is_Target_Aircraft(TarCom) || As_Aircraft(TarCom)->Altitude == 0) {
 					Assign_Target(TARGET_NONE);
 					Status = SAM_LOCKING;
+					SAMLoweringDelay = 0;
 				} else {
 					FireErrorType error = Can_Fire(TarCom, 0);
 					if (error == FIRE_ILLEGAL || error == FIRE_CANT || error == FIRE_RANGE) {
 						Assign_Target(TARGET_NONE);
 						Status = SAM_LOCKING;
+						SAMLoweringDelay = 0;
 					} else {
 						if (error == FIRE_FACING) {
 							Status = SAM_READY;
@@ -4351,6 +4356,7 @@ int BuildingClass::Mission_Attack(void)
 				if (!Target_Legal(TarCom) || !Is_Target_Aircraft(TarCom) || As_Aircraft(TarCom)->Altitude == 0) {
 					Assign_Target(TARGET_NONE);
 					Status = SAM_LOCKING;
+					SAMLoweringDelay = 0;
 					return(TICKS_PER_SECOND);
 				} else {
 					if (!PrimaryFacing.Is_Rotating()) {
@@ -4368,11 +4374,13 @@ int BuildingClass::Mission_Attack(void)
 				if (!Target_Legal(TarCom) || !Is_Target_Aircraft(TarCom) || As_Aircraft(TarCom)->Altitude == 0) {
 					Assign_Target(TARGET_NONE);
 					Status = SAM_LOCKING;
+					SAMLoweringDelay = 0;
 				} else {
 					FireErrorType error = Can_Fire(TarCom, 0);
 					if (error == FIRE_ILLEGAL || error == FIRE_CANT || error == FIRE_RANGE) {
 						Assign_Target(TARGET_NONE);
 						Status = SAM_LOCKING;
+						SAMLoweringDelay = 0;
 					} else {
 						if (error == FIRE_FACING) {
 							Status = SAM_READY2;
@@ -4380,6 +4388,7 @@ int BuildingClass::Mission_Attack(void)
 							if (error == FIRE_OK) {
 								Fire_At(TarCom, 0);
 								Status = SAM_LOCKING;
+								SAMLoweringDelay = 0;
 								return(TICKS_PER_SECOND*3);
 							}
 						}
@@ -4389,15 +4398,33 @@ int BuildingClass::Mission_Attack(void)
 
 			/*
 			**	Rotating to face north in preparation for lowering to reload.
+			**  #MinorAIFixes - delay and search for targets before lowering
 			*/
 			case SAM_LOCKING:
-				if (!PrimaryFacing.Is_Rotating()) {
-					if (PrimaryFacing == DIR_N) {
-						Set_Rate(2);
-						Set_Stage(48);
-						Status = SAM_LOWERING;
-					} else {
-						PrimaryFacing.Set_Desired(DIR_N);
+				if (SAMLoweringDelay < TICKS_PER_SECOND * 30) {
+					ThreatType threat = THREAT_RANGE;
+					Assign_Target(Greatest_Threat(threat));
+				}
+				if (Target_Legal(TarCom)) {
+					Status = SAM_READY;
+				}
+				else {
+					if (SAMLoweringDelay < TICKS_PER_SECOND * 10) {
+						SAMLoweringDelay = SAMLoweringDelay + 3;
+						return(3);
+					}
+					else {
+						if (!PrimaryFacing.Is_Rotating()) {
+							if (PrimaryFacing == DIR_N) {
+								Set_Rate(2);
+								Set_Stage(48);
+								SAMLoweringDelay = 0;
+								Status = SAM_LOWERING;
+							}
+							else {
+								PrimaryFacing.Set_Desired(DIR_N);
+							}
+						}
 					}
 				}
 				return(1);

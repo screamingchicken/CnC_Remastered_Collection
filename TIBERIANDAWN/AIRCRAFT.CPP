@@ -1881,8 +1881,9 @@ void AircraftClass::Enter_Idle_Mode(bool )
 			/*
 			**	If this transport is a loaner and part of a team, then remove it from
 			**	the team it is attached to.
+			**  #MinorAIFixes - double check this is a Transport, not Orca
 			*/
-			if (IsALoaner) {
+			if (*this == AIRCRAFT_TRANSPORT && IsALoaner) {
 				if (Team) {
 					Team->Remove(this);
 				}
