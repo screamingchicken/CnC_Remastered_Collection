@@ -660,13 +660,18 @@ int FootClass::Mission_Guard(void)
  *=============================================================================================*/
 int FootClass::Mission_Hunt(void)
 {
-	if (!Target_Something_Nearby(THREAT_NORMAL)) {
-		Random_Animate();
-	} else {
+
+// #MinorAIFixes - Try to target something in range. "Threat Normal" isn't meant to be passed to that function.
+//	if (!Target_Something_Nearby(THREAT_NORMAL)) {
+	if (!Target_Something_Nearby_Hunt(THREAT_RANGE)) {
+			Random_Animate();
+	}
+	else {
 		if (What_Am_I() == RTTI_INFANTRY && ((InfantryTypeClass const &)Class_Of()).Type == INFANTRY_E7) {
 			Assign_Destination(TarCom);
 			Assign_Mission(MISSION_CAPTURE);
-		} else {
+		}
+		else {
 			Approach_Target();
 		}
 	}

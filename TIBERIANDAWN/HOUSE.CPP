@@ -928,6 +928,17 @@ void HouseClass::AI(void)
 	NewActiveUScan = 0;
 	NewActiveAScan = 0;
 
+// #minorAIFixes - debug output to show up which Houses are in the game
+	if (Frame < 2 && this->Class->House == HOUSE_GOOD) { CCDebugString("House AI - This is HOUSE_GOOD \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_BAD) { CCDebugString("House AI - This is HOUSE_BAD \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_NEUTRAL) { CCDebugString("House AI - This is HOUSE_NEUTRAL \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_MULTI1) { CCDebugString("House AI - This is HOUSE_MULTI1 \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_MULTI2) { CCDebugString("House AI - This is HOUSE_MULTI2 \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_MULTI3) { CCDebugString("House AI - This is HOUSE_MULTI3 \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_MULTI4) { CCDebugString("House AI - This is HOUSE_MULTI4 \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_MULTI5) { CCDebugString("House AI - This is HOUSE_MULTI5 \n"); }
+	if (Frame < 2 && this->Class->House == HOUSE_MULTI6) { CCDebugString("House AI - This is HOUSE_MULTI6 \n"); }
+
 #ifdef USE_RA_AI
 	//
 	// Copied from RA for AI. ST - 7/25/2019 3:58PM
@@ -1589,6 +1600,15 @@ void HouseClass::AI(void)
 #ifdef USE_RA_AI	
 	if (GameToPlay == GAME_GLYPHX_MULTIPLAYER && IsHuman == false) {
 		
+		if ((Frame / 1942) > LastDebug && Drain > 0 ) {
+			char var1[256];
+			sprintf(var1, "%d min \t pow=%d \t drain=%d \t money=%d \t cap=%d \n", Frame/(1942), Power, Drain, Tiberium + Credits, Capacity);
+			CCDebugString(var1);
+			sprintf(var1, "%d min \t maxunit=%d \t maxinfantry=%d \t maxbuilding=%d \n", Frame / (1942), MaxUnit, MaxInfantry, MaxBuilding);
+			CCDebugString(var1);
+			LastDebug = (Frame / (1942));
+		}
+
 		/*
 		** Perform any expert system AI processing.
 		*/
@@ -1606,6 +1626,8 @@ void HouseClass::AI(void)
 		AI_Vessel();
 		AI_Infantry();
 		AI_Aircraft();
+// #MinorAIFixes - call the Harvester unsticking code	
+		AI_Harvesters();
 	}
 #endif
 
@@ -1672,6 +1694,12 @@ void HouseClass::AI(void)
 void HouseClass::Attacked(BuildingClass* source)
 {
 	Validate();
+
+// #MinorAIFixes - get STATE_ATTACKED working again
+	LATime = Frame;
+	if (!IsHuman) {
+		CCDebugString("AI Base is under attack - setting LATime \n");
+	}
 
 	if (SpeakAttackDelay.Expired() && PlayerPtr->Class->House == Class->House) {
 
@@ -5213,8 +5241,21 @@ COORDINATE HouseClass::Find_Build_Location(BuildingClass * building) const
 		}
 	}
 
-	CELL zcell = Find_Cell_In_Zone(building, zone);
-	if (zcell) {
+// #MinorAIFixes - If the building is a Refinery, try to place it in the base Zone nearest Tiberium
+	CELL zcell;
+
+	if (*building == STRUCT_REFINERY) {
+		zone = Zone_Nearest_Tiberium();
+		if (zone != ZONE_NONE) {
+			CCDebugString("We found a Zone nearest Tiberium \n");
+			zcell = Find_Cell_In_Zone(building, zone);
+		}
+	}
+	else {
+		zcell = Find_Cell_In_Zone(building, zone);
+	}
+
+	if (zcell) { // If this is non-zero, it's a boolean True
 		return(Cell_Coord(zcell));
 	}
 
@@ -5320,7 +5361,6 @@ void HouseClass::Recalc_Center(void)
 			if (y < top) y = top;
 			if (y > bottom) y = bottom;
 #endif
-
 			Center = XY_Coord(x, y);
 		}
 
@@ -5406,7 +5446,11 @@ int HouseClass::Expert_AI(void)
 	**	enemy that is closest is picked. However, don't pick an enemy if the
 	**	base has not been established yet.
 	*/
+//	char var3[256];
+//	sprintf(var3, "Expert AI \t ActiveBScan=%d \t Center=%d \t Attack=%d \n", ActiveBScan, Center, Attack.Get_Delay());
+//	CCDebugString(var3);
 	if (ActiveBScan && Center && Attack == 0) {
+		
 		int close = 0;
 		HousesType enemy = HOUSE_NONE;
 		int maxunit = 0;
@@ -5418,18 +5462,18 @@ int HouseClass::Expert_AI(void)
 
 		for (HousesType house = HOUSE_FIRST; house < HOUSE_COUNT; house++) {
 			HouseClass * h = HouseClass::As_Pointer(house);
-			if (h != NULL && h->IsActive && !h->IsDefeated && !Is_Ally(h)) {
-
+			if (h != NULL && h->IsActive && !h->IsDefeated && !Is_Ally(h) && (h->CurUnits > 0 || h->CurBuildings > 0)) {
 				/*
 				**	Perform a special restriction check to ensure that no enemy is chosen if
 				**	there is even one enemy that has not established a base yet. This will
 				**	ensure an accurate first pick for enemy since the distance to base
 				**	value can be determined.
 				*/
-				if (!h->IsStarted) {
-					enemy = HOUSE_NONE;
-					break;
-				}
+// #MinorAIFixes - this never worked, always called the break
+//				if (!h->IsStarted) {
+//					enemy = HOUSE_NONE;
+//					break;
+//				}
 
 				/*
 				**	Keep track of the number of buildings and units owned by the
@@ -5447,7 +5491,9 @@ int HouseClass::Expert_AI(void)
 				**	candidate base. The higher the value, the better the candidate house
 				**	is to becoming the preferred enemy for this house.
 				*/
-				int value = ((MAP_CELL_W*2)-Distance(Center, h->Center));
+
+// #MinorAIFixes - Was originally using Coords and getting 10k values.
+				int value = ((MAP_CELL_W*2)-Distance(Coord_Cell(Center), Coord_Cell(h->Center)));
 				value *= 2;
 
 				/*
@@ -5465,7 +5511,11 @@ int HouseClass::Expert_AI(void)
 				*/
 				value += h->CurUnits - CurUnits;
 				value += h->CurBuildings - CurBuildings;
-				value += (h->CurInfantry - CurInfantry)/4;
+
+// MinorAIFixes if AI is negative, this integer can overflow. Not sure why or if it's just a debugging issue.
+				if (h->CurInfantry >= CurInfantry) {
+					value += max(h->CurInfantry - CurInfantry, 0) / 4;
+				}
 
 				/*
 				**	Whoever last attacked is given a little more priority as
@@ -5475,20 +5525,24 @@ int HouseClass::Expert_AI(void)
 					value += 100;
 				}
 
-#ifdef OBSOLETE
+//#ifdef OBSOLETE
 				/*
 				**	Human players are a given preference as the target.
+				**	#MinorAIFixes - give humans a bit more preference. Not x2 but +20.
 				*/
 				if (h->IsHuman) {
-					value *= 2;
+					value += 20;
 				}
-#endif
+//#endif
 
 				/*
 				**	Compare the calculated value for this candidate house and if it is
 				**	greater than the previously recorded maximum, record this house as
 				**	the prime candidate for enemy.
 				*/
+				char var6[256];
+				sprintf(var6, "Expert_AI - Value=%d \t EnemyCurUnits=%d \t EnemyCurBuildings=%d \t Distance=%d \n", value, h->CurUnits, h->CurBuildings, Distance(Coord_Cell(Center), Coord_Cell(h->Center)));
+				CCDebugString(var6);
 				if (value > close) {
 					enemy = house;
 					close = value;
@@ -5517,10 +5571,15 @@ int HouseClass::Expert_AI(void)
 			Control.MaxBuilding = maxbuilding + 10;
 		}
 		if (Control.MaxUnit < (unsigned)maxunit + 10) {
-			Control.MaxUnit = maxunit + 10;
+
+			// #MinorAIFixes - raise the Unit limit
+//			Control.MaxUnit = maxunit + 10;
+			Control.MaxUnit = 150;
 		}
 		if (Control.MaxInfantry < (unsigned)maxinfantry + 10) {
-			Control.MaxInfantry = maxinfantry + 10;
+			// #MinorAIFixes - fix the Infantry limit
+//			Control.MaxInfantry = maxinfantry + 10;
+			Control.MaxInfantry = 10;
 		}
 		//if (Control.MaxVessel < (unsigned)maxvessel + 10) {
 		//	Control.MaxVessel = maxvessel + 10;
@@ -5550,11 +5609,14 @@ int HouseClass::Expert_AI(void)
 				State = STATE_BUILDUP;
 			}
 		}
-		if (State == STATE_ATTACKED && LATime + TICKS_PER_MINUTE < Frame) {
+// #MinorAIFixes - stopped it from being in STATE_ATTACKED in the first minute
+		if (State == STATE_ATTACKED && (LATime == 0 || LATime + 1942 < Frame)) {
 			State = STATE_BUILDUP;
+			CCDebugString("Changing state - Buildup \n");
 		}
-		if (State != STATE_ATTACKED && LATime + TICKS_PER_MINUTE > Frame) {
+		if (State != STATE_ATTACKED && LATime > 0 && (LATime + 1942 > Frame)) {
 			State = STATE_ATTACKED;
+			CCDebugString("Changing state - Attacked \n");
 		}
 	}
 
@@ -5824,7 +5886,8 @@ UrgencyType HouseClass::Check_Lower_Power(void) const
 {
 	//assert(Houses.ID(this) == ID);
 
-	if (Power > Drain+300) {
+// #MinorAIFixes - raise the threshold for selling power in Skirmish AI
+	if (Power > Drain+500) {
 		return(URGENCY_LOW);
 	}
 	return(URGENCY_NONE);
@@ -5857,9 +5920,36 @@ UrgencyType HouseClass::Check_Raise_Power(void) const
 bool HouseClass::AI_Attack(UrgencyType )
 {
 	//assert(Houses.ID(this) == ID);
+	/*
+	**	#MinorAIFixes - If we've just Rallied units, then don't shuffle.
+	**	Otherwise, don't both with shuffle if we have no Buildings OR on a 50% chance.
+	*/
 
-	bool shuffle = !((Frame > TICKS_PER_MINUTE && !CurBuildings) || Percent_Chance(33));
+	bool shuffle = false;
+	if (rallystatus != SKIRMISH_RALLIED) {
+		shuffle = !((Frame > TICKS_PER_MINUTE && !CurBuildings) || Percent_Chance(50));
+	}
+
+//	bool shuffle = !((Frame > TICKS_PER_MINUTE && !CurBuildings) || Percent_Chance(33));
 	bool forced = (CurBuildings == 0);
+	CELL rallypoint;
+
+	if (Enemy == HOUSE_GOOD && CurUnits > 0) { CCDebugString("AI_Attack - Enemy is HOUSE_GOOD \n"); }
+	if (Enemy == HOUSE_BAD && CurUnits > 0) { CCDebugString("AI_Attack - Enemy is HOUSE_GOOD \n"); }
+	if (Enemy == HOUSE_NEUTRAL && CurUnits > 0) { CCDebugString("AI_Attack - Enemy is HOUSE_NEUTRAL \n"); }
+	if (Enemy >= HOUSE_MULTI1 && Enemy <= HOUSE_MULTI6 && CurUnits > 0) {
+		CCDebugString("AI_Attack - Enemy is a Multi-House \n");
+	}
+	if (Enemy != HOUSE_NONE) {
+		rallypoint = GenerateRallyPoint();
+	}
+	
+	if (!shuffle && CurUnits > 0) { 
+		char var7[256];
+		sprintf(var7, "AI_Attack - Not on Shuffle loop: \t %d min %d sec \n", Frame / 1942, ((Frame % 1942) * 60) / 1942);
+		CCDebugString(var7);
+	}
+	
 	int index;
 	for (index = 0; index < Aircraft.Count(); index++) {
 		AircraftClass * a = Aircraft.Ptr(index);
@@ -5870,43 +5960,90 @@ bool HouseClass::AI_Attack(UrgencyType )
 			}
 		}
 	}
-	for (index = 0; index < Units.Count(); index++) {
-		UnitClass * u = Units.Ptr(index);
+	
+	if (CurUnits > 0) {
+		for (index = 0; index < Units.Count(); index++) {
+			UnitClass * u = Units.Ptr(index);
 
-		if (u != NULL && !u->IsInLimbo && u->House == this && u->Strength > 0) {
-			if (!shuffle && u->Is_Weapon_Equipped() && (forced || Percent_Chance(75))) {
-				u->Assign_Mission(MISSION_HUNT);
-			} else {
+			if (u != NULL && !u->IsInLimbo && u->House == this && u->Strength > 0) {
 
-				/*
-				**	If this unit is guarding the base, then cause it to shuffle
-				**	location instead.
-				*/
-				if (Percent_Chance(20) && u->Mission == MISSION_GUARD_AREA && Which_Zone(u) != ZONE_NONE) {
-					u->ArchiveTarget = ::As_Target(Where_To_Go(u));
+// #MinorAIFixes - Send all units to attack, not 75%
+//			if (!shuffle && u->Is_Weapon_Equipped() && (forced || Percent_Chance(75))) {
+				if (!shuffle && u->Is_Weapon_Equipped()) {
+					if (Enemy != HOUSE_NONE && (rallystatus == SKIRMISH_COMPLETED || rallystatus == SKIRMISH_RALLYING)) {
+						CCDebugString("AI_Attack - moving Unit to rally point \n");
+						u->ArchiveTarget = ::As_Target(rallypoint);
+						rallystatus = SKIRMISH_RALLYING;
+					}
+					else {
+						CCDebugString("AI_Attack - sending a Unit to Hunt \n");
+						u->Assign_Mission(MISSION_HUNT);
+						rallystatus = SKIRMISH_ATTACKING;
+					}
+				}
+				else {
+					/*
+					**	If this unit is guarding the base, then cause it to shuffle
+					**	location instead.
+					*/
+					if (Percent_Chance(20) && u->Mission == MISSION_GUARD_AREA && Which_Zone(u) != ZONE_NONE) {
+						u->ArchiveTarget = ::As_Target(Where_To_Go(u));
+					}
 				}
 			}
 		}
 	}
-	for (index = 0; index < Infantry.Count(); index++) {
-		InfantryClass * i = Infantry.Ptr(index);
 
-		if (i != NULL && !i->IsInLimbo && i->House == this && i->Strength > 0) {
-			if (!shuffle && (i->Is_Weapon_Equipped() || *i == INFANTRY_RENOVATOR) && (forced || Percent_Chance(75))) {
-				i->Assign_Mission(MISSION_HUNT);
-			} else {
+	/*
+	**	#MinorAIfixes - dont't use Infantry to set rallystatus enum, their 75% chance of attacking messes with it.
+	*/
+	if (CurInfantry > 0) {
+		for (index = 0; index < Infantry.Count(); index++) {
+			InfantryClass * i = Infantry.Ptr(index);
 
-				/*
-				**	If this soldier is guarding the base, then cause it to shuffle
-				**	location instead.
-				*/
-				if (Percent_Chance(20) && i->Mission == MISSION_GUARD_AREA && Which_Zone(i) != ZONE_NONE) {
-					i->ArchiveTarget = ::As_Target(Where_To_Go(i));
+			if (i != NULL && !i->IsInLimbo && i->House == this && i->Strength > 0) {
+				if (!shuffle && (i->Is_Weapon_Equipped() || *i == INFANTRY_RENOVATOR) && (forced || Percent_Chance(75))) {
+//				i->Assign_Mission(MISSION_HUNT);
+					if (Enemy != HOUSE_NONE && (rallystatus == SKIRMISH_COMPLETED || rallystatus == SKIRMISH_RALLYING)) {
+						CCDebugString("AI_Attack - moving Infantry to rally point \n");
+						i->ArchiveTarget = ::As_Target(rallypoint);
+					}
+					else {
+						CCDebugString("AI_Attack - sending Infantry to Hunt \n");
+						i->Assign_Mission(MISSION_HUNT);
+					}
+				}
+				else {
+
+					/*
+					**	If this soldier is guarding the base, then cause it to shuffle
+					**	location instead.
+					*/
+					if (Percent_Chance(20) && i->Mission == MISSION_GUARD_AREA && Which_Zone(i) != ZONE_NONE) {
+						i->ArchiveTarget = ::As_Target(Where_To_Go(i));
+					}
 				}
 			}
 		}
 	}
-	Attack = Rule.AttackInterval * Random_Pick(TICKS_PER_MINUTE/2, TICKS_PER_MINUTE*2);
+
+	if (rallystatus == SKIRMISH_RALLYING) {
+		rallystatus = SKIRMISH_RALLIED;
+		CCDebugString("AI_Attack - Setting status to Rallied \n");
+	}
+	if (rallystatus == SKIRMISH_ATTACKING) {
+		rallystatus = SKIRMISH_COMPLETED;
+		CCDebugString("AI_Attack - Setting status to Completed \n");
+	}
+
+	if (rallystatus == SKIRMISH_RALLIED) {
+		Attack = 1200;
+		//Attack = Rule.AttackInterval * Random_Pick(TICKS_PER_MINUTE / 2, TICKS_PER_MINUTE * 2);
+	}
+	else {
+		Attack = Rule.AttackInterval * Random_Pick(TICKS_PER_MINUTE / 2, TICKS_PER_MINUTE * 2);
+	}
+
 	return(true);
 }
 
@@ -6318,14 +6455,18 @@ int HouseClass::AI_Building(void)
 		**	money available.
 		*/
 		b = &BuildingTypeClass::As_Reference(STRUCT_ADVANCED_POWER);
-		if (Can_Build(b, ActLike) && Power <= Drain+Rule.PowerSurplus && b->Cost_Of() < money) {
+// #MinorAIFixes - Compensate for when an adv power has just been built but is not yet online
+		if (Can_Build(b, ActLike) && (Power <= Drain+Rule.PowerSurplus && Power_Estimate() <= Drain + Rule.PowerSurplus) && b->Cost_Of() < money) {
 			choiceptr = BuildChoice.Alloc();
 			if (choiceptr != NULL) {
 				*choiceptr = BuildChoiceClass(BQuantity[STRUCT_REFINERY] == 0 ? URGENCY_LOW : URGENCY_MEDIUM, b->Type);
+				char var2[256];
+				sprintf(var2, "Current Power is %d Current Drain is %d \n", Power, Drain + Rule.PowerSurplus);
+				CCDebugString(var2);
 			}
 		} else {
 			b = &BuildingTypeClass::As_Reference(STRUCT_POWER);
-			if (Can_Build(b, ActLike) && Power <= Drain+Rule.PowerSurplus && b->Cost_Of() < money) {
+			if (Can_Build(b, ActLike) && (Power <= Drain+Rule.PowerSurplus && Power_Estimate() <= Drain + Rule.PowerSurplus) && b->Cost_Of() < money) {
 				choiceptr = BuildChoice.Alloc();
 				if (choiceptr != NULL) {
 					*choiceptr = BuildChoiceClass(BQuantity[STRUCT_REFINERY] == 0 ? URGENCY_LOW : URGENCY_MEDIUM, b->Type);
@@ -6385,13 +6526,15 @@ int HouseClass::AI_Building(void)
 				}
 			}
 		}
+#endif
 
 		/*
-		**	Try to build one gap generator.
+		**  #MinorAIFixes - Skirmish AI didn't originally build a Radar.
+		**  Try to build one Radar if 3 Refineries and a Factory/Airstrip are up to unlock other production.
 		*/
-		current = BQuantity[STRUCT_GAP];
-		if (current < 1 && Power_Fraction() >= 1 && hasincome) {
-			b = &BuildingTypeClass::As_Reference(STRUCT_GAP);
+		current = BQuantity[STRUCT_RADAR];
+		if (current < 1 && Power_Fraction() >= 1 && hasincome && (BQuantity[STRUCT_REFINERY] > 2) && (BQuantity[STRUCT_AIRSTRIP] > 0 || BQuantity[STRUCT_WEAP] > 0)) {
+			b = &BuildingTypeClass::As_Reference(STRUCT_RADAR);
 			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
 				choiceptr = BuildChoice.Alloc();
 				if (choiceptr != NULL) {
@@ -6399,7 +6542,7 @@ int HouseClass::AI_Building(void)
 				}
 			}
 		}
-#endif
+
 		/*
 		**	A source of combat vehicles is always needed, but only if there will
 		**	be sufficient money to build vehicles.
@@ -6410,27 +6553,48 @@ int HouseClass::AI_Building(void)
 			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
 				choiceptr = BuildChoice.Alloc();
 				if (choiceptr != NULL) {
-					*choiceptr = BuildChoiceClass(current > 0 ? URGENCY_LOW : URGENCY_MEDIUM, b->Type);
+					if (BQuantity[STRUCT_REFINERY] < 4) {
+						*choiceptr = BuildChoiceClass(current > 0 ? URGENCY_LOW : URGENCY_MEDIUM, b->Type);
+					}
+					else {
+						*choiceptr = BuildChoiceClass(current > 1 ? URGENCY_LOW : URGENCY_MEDIUM, b->Type);
+					}
 				}
 			}
 		}
 
 		/*
-		**	Always build up some base defense.
+		**	An airstrip would be good.
+		**  #MinorAIFixes - Removed all the leftover RA code for RA airstrips.
 		*/
-		//current = BQuantity[STRUCT_PILLBOX] + BQuantity[STRUCT_CAMOPILLBOX] + BQuantity[STRUCT_TURRET] + BQuantity[STRUCT_FLAME_TURRET];
+		current = BQuantity[STRUCT_AIRSTRIP];
+		if (current < Round_Up(Rule.AirstripRatio*fixed(CurBuildings)) && current < (unsigned)Rule.AirstripLimit && (money > 2000 || hasincome)) {
+			b = &BuildingTypeClass::As_Reference(STRUCT_AIRSTRIP);
+			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
+				choiceptr = BuildChoice.Alloc();
+				if (choiceptr != NULL) {
+					if (BQuantity[STRUCT_REFINERY] < 4) {
+						*choiceptr = BuildChoiceClass(current > 0 ? URGENCY_LOW : URGENCY_MEDIUM, b->Type);
+					}
+					else {
+						*choiceptr = BuildChoiceClass(current > 1 ? URGENCY_LOW : URGENCY_MEDIUM, b->Type);
+					}
+				}
+			}
+		}
+
+		/*
+		**	Build Nod base defense if possible.
+		*/
 		current = BQuantity[STRUCT_TURRET] + BQuantity[STRUCT_OBELISK];
 		if (current < Round_Up(Rule.DefenseRatio*fixed(CurBuildings)) && current < (unsigned)Rule.DefenseLimit) {
-			//b = &BuildingTypeClass::As_Reference(STRUCT_FLAME_TURRET);
 			b = &BuildingTypeClass::As_Reference(STRUCT_OBELISK);
-			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
+			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome) && Percent_Chance(25)) {
 				choiceptr = BuildChoice.Alloc();
 				if (choiceptr != NULL) {
 					*choiceptr = BuildChoiceClass(URGENCY_MEDIUM, b->Type);
 				}
 			} else {
-				//if (Percent_Chance(50)) {
-					//b = &BuildingTypeClass::As_Reference(STRUCT_PILLBOX);
 					b = &BuildingTypeClass::As_Reference(STRUCT_TURRET);
 					if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
 						choiceptr = BuildChoice.Alloc();
@@ -6438,17 +6602,30 @@ int HouseClass::AI_Building(void)
 							*choiceptr = BuildChoiceClass(URGENCY_MEDIUM, b->Type);
 						}
 					}
-#if (0)
-				} else {
-					b = &BuildingTypeClass::As_Reference(STRUCT_TURRET);
-					if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
-						choiceptr = BuildChoice.Alloc();
-						if (choiceptr != NULL) {
-							*choiceptr = BuildChoiceClass(URGENCY_MEDIUM, b->Type);
-						}
+			}
+		}
+
+		/*
+		**  #MinorAIFixes - Skirmish AI originally did not build GDI defences
+		**  Build GDI base defense if possible.
+		*/
+		current = BQuantity[STRUCT_GTOWER] + BQuantity[STRUCT_ATOWER];
+		if (current < Round_Up(Rule.DefenseRatio*fixed(CurBuildings)) && current < (unsigned)Rule.DefenseLimit) {
+			b = &BuildingTypeClass::As_Reference(STRUCT_ATOWER);
+			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome) && Percent_Chance(40)) {
+				choiceptr = BuildChoice.Alloc();
+				if (choiceptr != NULL) {
+					*choiceptr = BuildChoiceClass(URGENCY_MEDIUM, b->Type);
+				}
+			}
+			else {
+				b = &BuildingTypeClass::As_Reference(STRUCT_GTOWER);
+				if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
+					choiceptr = BuildChoice.Alloc();
+					if (choiceptr != NULL) {
+						*choiceptr = BuildChoiceClass(URGENCY_MEDIUM, b->Type);
 					}
 				}
-#endif
 			}
 		}
 
@@ -6552,9 +6729,10 @@ int HouseClass::AI_Building(void)
 
 		/*
 		**	A helipad would be good.
+		**  #MinorAIFixes - No it wouldn't. Pushed back Helipad building until late game
 		*/
 		current = BQuantity[STRUCT_HELIPAD];
-		if (current < Round_Up(Rule.HelipadRatio*fixed(CurBuildings)) && current < (unsigned)Rule.HelipadLimit) {
+		if (current < Round_Up(Rule.HelipadRatio*fixed(CurBuildings)) && current < (unsigned)Rule.HelipadLimit && CurBuildings > 25) {
 			b = &BuildingTypeClass::As_Reference(STRUCT_HELIPAD);
 			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
 				choiceptr = BuildChoice.Alloc();
@@ -6569,25 +6747,6 @@ int HouseClass::AI_Building(void)
 			}
 		}
 		
-		/*
-		**	An airstrip would be good.
-		*/
-		current = BQuantity[STRUCT_AIRSTRIP];
-		if (current < Round_Up(Rule.AirstripRatio*fixed(CurBuildings)) && current < (unsigned)Rule.AirstripLimit) {
-			b = &BuildingTypeClass::As_Reference(STRUCT_AIRSTRIP);
-			if (Can_Build(b, ActLike) && (b->Cost_Of() < money || hasincome)) {
-				choiceptr = BuildChoice.Alloc();
-				if (choiceptr != NULL) {
-					int threat_quantity = 0;
-					if (enemy != NULL) {
-						threat_quantity = enemy->CurAircraft;
-					}
-
-					*choiceptr = BuildChoiceClass((CurAircraft < (unsigned)threat_quantity) ? URGENCY_HIGH : URGENCY_MEDIUM, b->Type);
-				}
-			}
-		}
-
 		/*
 		**	Pick the choice that is the most urgent.
 		*/
@@ -6733,15 +6892,31 @@ int HouseClass::AI_Unit(void)
 		UnitType index;
 		for (index = UNIT_FIRST; index < UNIT_COUNT; index++) {
 			UnitTypeClass const * utype = &UnitTypeClass::As_Reference(index);
-			if (Can_Build(utype, ActLike) && utype->Type != UNIT_HARVESTER) {
-				//if (utype->PrimaryWeapon != NULL) {
-				if (utype->Primary != WEAPON_NONE) {
-					counter[index] = 20;
+// #MinorAIFixes - Seems unlikely it would ever try to build an MCV, but stop that anyway. Also stop the Arty/Stealth building.
+//                 If the base is under attack, stop building Flame/Light tanks, only build serious stuff.
+			if (State == STATE_ATTACKED) {
+				if (Can_Build(utype, ActLike) && utype->Type != UNIT_HARVESTER && utype->Type != UNIT_MCV && utype->Type != UNIT_ARTY && utype->Type != UNIT_STANK && utype->Type != UNIT_LTANK
+					&& utype->Type != UNIT_LTANK) {
+					if (utype->Primary != WEAPON_NONE) {
+						counter[index] = 20;
+					} else {
+						counter[index] = 1;
+					}
 				} else {
-					counter[index] = 1;
+					counter[index] = 0;
 				}
 			} else {
-				counter[index] = 0;
+				if (Can_Build(utype, ActLike) && utype->Type != UNIT_HARVESTER && utype->Type != UNIT_MCV && utype->Type != UNIT_ARTY && utype->Type != UNIT_STANK) {
+					if (utype->Primary != WEAPON_NONE) {
+						counter[index] = 20;
+					}
+					else {
+						counter[index] = 1;
+					}
+				}
+				else {
+					counter[index] = 0;
+				}
 			}
 			total += counter[index];
 		}
@@ -6751,6 +6926,12 @@ int HouseClass::AI_Unit(void)
 			for (index = UNIT_FIRST; index < UNIT_COUNT; index++) {
 				if (choice < counter[index]) {
 					BuildUnit = index;
+					if (State == STATE_ATTACKED) {
+						CCDebugString("Building a Unit, State is Attacked \n"); 
+					}
+					else {
+						CCDebugString("Building a Unit, State is NOT Attacked \n"); 
+					}
 					break;
 				}
 				choice -= counter[index];
@@ -6990,7 +7171,8 @@ int HouseClass::AI_Infantry(void)
 #endif
 	}
 
-	if (IsBaseBuilding) {
+// #MinorAIFixes - stop building Infantry in the mid-late game
+	if (IsBaseBuilding && CurBuildings < 10) {
 		HouseClass const * enemy = NULL;
 		if (Enemy != HOUSE_NONE) {
 			enemy = HouseClass::As_Pointer(Enemy);
@@ -7766,7 +7948,7 @@ CELL HouseClass::Where_To_Go(FootClass const * object) const
 		zone = Random_Pick(ZONE_NORTH, ZONE_WEST);
 	}
 
-	CELL cell = Random_Cell_In_Zone(zone);
+	CELL cell = Random_Cell_In_Zone(zone, false);
 	//assert(cell != 0);
 
 	return(Map.Nearby_Location(cell));	//, SPEED_TRACK, Map[cell].Zones[MZONE_NORMAL], MZONE_NORMAL));
@@ -8525,7 +8707,7 @@ CELL HouseClass::Find_Cell_In_Zone(TechnoClass const * techno, ZoneType zone) co
 	/*
 	**	Pick a random location within the zone specified.
 	*/
-	CELL trycell = Random_Cell_In_Zone(zone);
+	CELL trycell = Random_Cell_In_Zone(zone, true);
 
 	short const * list = NULL;
 	if (techno->What_Am_I() == RTTI_BUILDING) {
@@ -8571,7 +8753,8 @@ CELL HouseClass::Find_Cell_In_Zone(TechnoClass const * techno, ZoneType zone) co
  *    This routine will pick a random cell within the zone specified. The pick will be         *
  *    clipped to the map edge when necessary.                                                  *
  *                                                                                             *
- * INPUT:   zone  -- The zone to pick a cell from.                                             *
+ * INPUT:   zone  -- The zone to pick a cell from.											   *
+ *			BuildingPlacement -- Whether this is for a building or a Unit					   *
  *                                                                                             *
  * OUTPUT:  Returns with a picked cell within the zone. If the entire zone lies outside of the *
  *          map, then a cell in the core zone is returned instead.                             *
@@ -8581,85 +8764,128 @@ CELL HouseClass::Find_Cell_In_Zone(TechnoClass const * techno, ZoneType zone) co
  * HISTORY:                                                                                    *
  *   11/04/1996 JLB : Created.                                                                 *
  *=============================================================================================*/
-CELL HouseClass::Random_Cell_In_Zone(ZoneType zone) const
+CELL HouseClass::Random_Cell_In_Zone(ZoneType zone, bool BuildingPlacement) const
 {
-	COORDINATE coord = 0;
-	int maxdist = 0;
-	switch (zone) {
+	CELL cell;
+	bool IsUnderRefinery;
+	
+	do {
+		IsUnderRefinery = false;
+		COORDINATE coord = 0;
+		int maxdist = 0;
+		switch (zone) {
 		case ZONE_CORE:
 			coord = Coord_Scatter(Center, Random_Pick(0, Radius), true);
 			break;
 
 		case ZONE_NORTH:
-			maxdist = min(Radius*3, (Coord_Y(Center) - Cell_To_Lepton(Map.MapCellY)) - CELL_LEPTON_H);
+			maxdist = min(Radius * 3, (Coord_Y(Center) - Cell_To_Lepton(Map.MapCellY)) - CELL_LEPTON_H);
 			if (maxdist < 0) break;
-			coord = Coord_Move(Center, (DirType)(Random_Pick(DIR_N, DIR_E)-((DirType)32)), Random_Pick(min(Radius*2, maxdist), min(Radius*3, maxdist)));
+			coord = Coord_Move(Center, (DirType)(Random_Pick(DIR_N, DIR_E) - ((DirType)32)), Random_Pick(min(Radius * 2, maxdist), min(Radius * 3, maxdist)));
 			break;
 
 		case ZONE_EAST:
-			maxdist = min(Radius*3, (Cell_To_Lepton(Map.MapCellX + Map.MapCellWidth) - Coord_X(Center)) - CELL_LEPTON_W);
+			maxdist = min(Radius * 3, (Cell_To_Lepton(Map.MapCellX + Map.MapCellWidth) - Coord_X(Center)) - CELL_LEPTON_W);
 			if (maxdist < 0) break;
-			coord = Coord_Move(Center, Random_Pick(DIR_NE, DIR_SE), Random_Pick(min(Radius*2, maxdist), min(Radius*3, maxdist)));
+			coord = Coord_Move(Center, Random_Pick(DIR_NE, DIR_SE), Random_Pick(min(Radius * 2, maxdist), min(Radius * 3, maxdist)));
 			break;
 
 		case ZONE_SOUTH:
-			maxdist = min(Radius*3, (Cell_To_Lepton(Map.MapCellY + Map.MapCellHeight) - Coord_Y(Center)) - CELL_LEPTON_H);
+			maxdist = min(Radius * 3, (Cell_To_Lepton(Map.MapCellY + Map.MapCellHeight) - Coord_Y(Center)) - CELL_LEPTON_H);
 			if (maxdist < 0) break;
-			coord = Coord_Move(Center, Random_Pick(DIR_SE, DIR_SW), Random_Pick(min(Radius*2, maxdist), min(Radius*3, maxdist)));
+			coord = Coord_Move(Center, Random_Pick(DIR_SE, DIR_SW), Random_Pick(min(Radius * 2, maxdist), min(Radius * 3, maxdist)));
 			break;
 
 		case ZONE_WEST:
-			maxdist = min(Radius*3, (Coord_X(Center) - Cell_To_Lepton(Map.MapCellX)) - CELL_LEPTON_W);
+			maxdist = min(Radius * 3, (Coord_X(Center) - Cell_To_Lepton(Map.MapCellX)) - CELL_LEPTON_W);
 			if (maxdist < 0) break;
-			coord = Coord_Move(Center, Random_Pick(DIR_SW, DIR_NW), Random_Pick(min(Radius*2, maxdist), min(Radius*3, maxdist)));
+			coord = Coord_Move(Center, Random_Pick(DIR_SW, DIR_NW), Random_Pick(min(Radius * 2, maxdist), min(Radius * 3, maxdist)));
 			break;
-	}
-
-	/*
-	**	Double check that the location is valid and if so, convert it into a cell
-	**	number.
-	*/
-	CELL cell;
-	if (coord == 0 || !Map.In_Radar(Coord_Cell(coord))) {
-		if (zone == ZONE_CORE) {
-
-			/*
-			**	Finding a cell within the core failed, so just pick the center
-			**	cell. This cell is guaranteed to be valid.
-			*/
-			cell = Coord_Cell(Center);
-		} else {
-
-			/*
-			**	If the edge fails, then try to find a cell within the core.
-			*/
-			cell = Random_Cell_In_Zone(ZONE_CORE);
 		}
-	} else {
-		cell = Coord_Cell(coord);
-	}
 
-	/*
-	**	If the randomly picked location is not in the legal map area, then clip it to
-	**	the legal map area.
-	*/
-	if (!Map.In_Radar(cell)) {
-		int x = Cell_X(cell);
-		int y = Cell_Y(cell);
+		/*
+		**	Double check that the location is valid and if so, convert it into a cell
+		**	number.
+		*/
+		if (coord == 0 || !Map.In_Radar(Coord_Cell(coord))) {
+			if (zone == ZONE_CORE) {
 
-		if (x < Map.MapCellX) x = Map.MapCellX;
-		if (y < Map.MapCellY) y = Map.MapCellY;
-		if (x >= Map.MapCellX + Map.MapCellWidth) x = Map.MapCellX + Map.MapCellWidth -1;
-		if (y >= Map.MapCellY + Map.MapCellHeight) y = Map.MapCellY + Map.MapCellHeight -1;
-		cell = XY_Cell(x, y);
-	}
+				/*
+				**	Finding a cell within the core failed, so just pick the center
+				**	cell. This cell is guaranteed to be valid.
+				*/
+				cell = Coord_Cell(Center);
+				char string1[256];
+				sprintf(string1, "Random Cell - Failed so picking centre cell - %d \n", cell);
+				CCDebugString(string1);
+			}
+			else {
+
+				/*
+				**	If the edge fails, then try to find a cell within the core.
+				*/
+				cell = Random_Cell_In_Zone(ZONE_CORE, BuildingPlacement);
+			}
+		}
+		else {
+			cell = Coord_Cell(coord);
+			char string2[256];
+			sprintf(string2, "Random Cell - Succeeded, cell is - %d \n", cell);
+			CCDebugString(string2);
+		}
+
+		/*
+		**	If the randomly picked location is not in the legal map area, then clip it to
+		**	the legal map area.
+		*/
+		if (!Map.In_Radar(cell)) {
+			int x = Cell_X(cell);
+			int y = Cell_Y(cell);
+
+			if (x < Map.MapCellX) x = Map.MapCellX;
+			if (y < Map.MapCellY) y = Map.MapCellY;
+			if (x >= Map.MapCellX + Map.MapCellWidth) x = Map.MapCellX + Map.MapCellWidth - 1;
+			if (y >= Map.MapCellY + Map.MapCellHeight) y = Map.MapCellY + Map.MapCellHeight - 1;
+			cell = XY_Cell(x, y);
+		}
+
+		// #MinorAIFixes - check if the three cells above the chosen cell contain a Refinery. If so, find another cell.
+		CellClass *cellptr_NW = &Map[(CELL)(cell + AdjacentCell[FACING_NW])];
+		CellClass *cellptr_N = &Map[(CELL)(cell + AdjacentCell[FACING_N])];
+		CellClass *cellptr_NE = &Map[(CELL)(cell + AdjacentCell[FACING_NE])];
+		TechnoClass * tech_NW = cellptr_NW->Cell_Techno_B();
+		TechnoClass * tech_N = cellptr_N->Cell_Techno_B();
+		TechnoClass * tech_NE = cellptr_NE->Cell_Techno_B();
+
+		//Still crashing ??
+		// techno is null? getting called by building placement code?
+		if (tech_NW) {
+			if (tech_NW->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)tech_NW) == STRUCT_REFINERY) {
+				IsUnderRefinery = true;
+				CCDebugString("Random Cell - The NW cell is under a Refinery \n");
+			}
+		}
+		if (tech_N) {
+			if (tech_N->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)tech_N) == STRUCT_REFINERY) {
+				IsUnderRefinery = true;
+				CCDebugString("Random Cell - The N cell is under a Refinery \n");
+			}
+		}
+		if (tech_NE) {
+			if (tech_NE->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)tech_NE) == STRUCT_REFINERY) {
+				IsUnderRefinery = true;
+				CCDebugString("Random Cell - The NE cell is under a Refinery \n");
+			}
+		}
+	} while (IsUnderRefinery != false && !BuildingPlacement);
+	
 	return(cell);
 }
 
 /***********************************************************************************************
  * HouseClass::Get_Ally_Flags --  Get the bit flags denoting the allies this house has.		  *
  *                                                                                             *
- * INPUT:   none																										  *
+ * INPUT:   none																			  *
  *                                                                                             *
  * OUTPUT:  Returns the bit field storing which houses this house is allied with.              *
  *                                                                                             *
@@ -8671,6 +8897,310 @@ CELL HouseClass::Random_Cell_In_Zone(ZoneType zone) const
 unsigned HouseClass::Get_Ally_Flags()
 {
 	return Allies;
+}
+
+
+/***********************************************************************************************
+ * HouseClass::AI_Harvesters --  Get any harvesters which have crashed into each other         *
+ *								 moving again. Checks the Harvester location every 6 seconds   *
+ *                                                                                             *
+ *			#MinorAIFixes                                                                      *
+ *                                                                                             *
+ * INPUT:   none																			   *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   20/10/2020 Created.                                                                       *
+ *=============================================================================================*/
+void HouseClass::AI_Harvesters(void)
+{
+	Validate();
+	if ((Frame / 323) > HarvesterTimeCheck) {
+		if (UQuantity[UNIT_HARVESTER] > 0) {
+			for (int index = 0; index < Units.Count(); index++) {
+				UnitClass * u = Units.Ptr(index);
+				if (u != NULL && !u->IsInLimbo && u->House == this && u->Strength > 0 && *u == UNIT_HARVESTER) {
+					u->Unstick_Harvesters();
+				}
+			}
+		}
+		HarvesterTimeCheck = (Frame / (323));
+	}
+	return;
+}
+
+/***********************************************************************************************
+ * HouseClass::Shift_Units --  Moves any produced units away from the Factory into a random    *
+ * base zone to reduce clogging. This is called from UnitClass:Enter_Idle_Mode when a new      *
+ * Unit is created and goes into Idle.                                                         *
+ *                                                                                             *
+ *			#MinorAIFixes                                                                      *
+ *                                                                                             *
+ * INPUT:   The Unit to be moved															   *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   20/10/2020 Created.                                                                       *
+ *=============================================================================================*/
+void HouseClass::Shift_Units(UnitClass * u)
+{
+	Validate();
+	ZoneType zone_origin;							// The zone that the object is currently in
+	ZoneType zone_destination = ZONE_NONE;			// The zone that the object should go to
+	
+	zone_origin = Which_Zone(u);
+	while (zone_destination == zone_origin || zone_destination == ZONE_NONE) {
+		zone_destination = Random_Pick(ZONE_NORTH, ZONE_WEST);			// Pick a random zone that isn't the origin
+	}
+			
+	CELL cell = Random_Cell_In_Zone(zone_destination, false);
+
+	// If we're sending units to the midpoint of the map before an attack, then send them straight there. Otherwise shuffle them.
+	if (Enemy != HOUSE_NONE && (rallystatus == SKIRMISH_RALLYING || rallystatus == SKIRMISH_RALLIED)) {
+		CELL rallypoint = GenerateRallyPoint();
+		u->ArchiveTarget = ::As_Target(rallypoint);
+		CCDebugString("Shift_Units - moving Unit to rally point \n");
+	}
+	else {
+		u->ArchiveTarget = ::As_Target(Map.Nearby_Location(cell));
+	}
+//	u->ArchiveTarget = ::As_Target(Map.Nearby_Location(cell));
+	return;
+}
+
+/***********************************************************************************************
+ * HouseClass::Tiberium_Check -- Look for Tiberium near a Cell.								   *
+ *                                Copied from UnitClass::Tiberium_Check					       *
+ *                                                                                             *
+ *			#MinorAIFixes                                                                      *
+ *                                                                                             *
+ * INPUT:   Cell to search                                                                     *
+ *                                                                                             *
+ * OUTPUT:  int; Amount of Tiberium at this location.                                          *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   29/10/2020		Created.	                                                               *
+ *=============================================================================================*/
+int HouseClass::Tiberium_Check(CELL &center, int x, int y) const
+{
+	Validate();
+	/*
+	**	If the specified offset from the origin will cause it
+	**	to spill past the map edge, then abort this cell check.
+	*/
+	if (Cell_X(center) + x < Map.MapCellX) return(0);
+	if (Cell_X(center) + x >= Map.MapCellX + Map.MapCellWidth) return(0);
+	if (Cell_Y(center) + y < Map.MapCellY) return(0);
+	if (Cell_Y(center) + y >= Map.MapCellY + Map.MapCellHeight) return(0);
+
+	center = XY_Cell(Cell_X(center) + x, Cell_Y(center) + y);
+
+	//using function for IsVisible so we have different results for different players - JAS 2019/09/30
+	if ((GameToPlay != GAME_NORMAL || (!IsHuman || Map[center].Is_Visible(PlayerPtr)))) {
+		if (!Map[center].Cell_Techno() && Map[center].Land_Type() == LAND_TIBERIUM) {
+			return(Map[center].OverlayData + 1);
+		}
+	}
+	return(0);
+}
+
+/***********************************************************************************************
+ * HouseClass::Zone_Nearest_Tiberium -- Look for the base Zone nearest a Tiberium field	       *
+ *                                                                                             *
+ *			#MinorAIFixes                                                                      *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  ZONE nearest the Tiberium field			                                           *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   29/10/2020       Created.                                                                 *
+ *=============================================================================================*/
+ZoneType HouseClass::Zone_Nearest_Tiberium(void) const
+{
+	Validate();
+			/*
+			**	Perform a ring search outward from the center.
+			*/
+			for (int radius = 1; radius < 64; radius++) {
+				CELL cell = Coord_Cell(Center);
+				CELL bestcell = 0;
+				int tiberium = 0;
+				int besttiberium = 0;
+				for (int x = -radius; x <= radius; x++) {
+
+					/*
+					**	Randomize the corners.
+					*/
+					int corner[2];
+					int corners[4][2] = {
+						{x, -radius},
+						{x, +radius},
+						{-radius, x},
+						{+radius, x}
+					};
+					for (int i = 0; i < 3; i++) {
+						int j = i + rand() / (RAND_MAX / (4 - i) + 1);
+						memcpy(&corner, &corners[j], sizeof(corner));
+						memcpy(&corners[j], &corners[i], sizeof(corner));
+						memcpy(&corners[i], corner, sizeof(corner));
+					}
+
+					cell = Coord_Cell(Center);
+					tiberium = Tiberium_Check(cell, corners[0][0], corners[0][1]);
+					if (tiberium > besttiberium) {
+						bestcell = cell;
+						besttiberium = tiberium;
+					}
+
+					cell = Coord_Cell(Center);
+					tiberium = Tiberium_Check(cell, corners[1][0], corners[1][1]);
+					if (tiberium > besttiberium) {
+						bestcell = cell;
+						besttiberium = tiberium;
+					}
+
+					cell = Coord_Cell(Center);
+					tiberium = Tiberium_Check(cell, corners[2][0], corners[2][1]);
+					if (tiberium > besttiberium) {
+						bestcell = cell;
+						besttiberium = tiberium;
+					}
+
+					cell = Coord_Cell(Center);
+					tiberium = Tiberium_Check(cell, corners[3][0], corners[3][1]);
+					if (tiberium > besttiberium) {
+						bestcell = cell;
+						besttiberium = tiberium;
+					}
+				}
+				if (bestcell) {
+//					Assign_Destination(::As_Target(bestcell));
+
+					COORDINATE coord = Cell_Coord(bestcell);
+					if (coord == 0) return(ZONE_NONE);
+
+					int distance = Distance(Center, coord);
+					if (distance <= Radius) return(ZONE_CORE);
+//					if (distance > Radius * 4) return(ZONE_NONE);
+
+					DirType facing = Direction(Center, coord);
+
+					if (facing < DIR_NE || facing > DIR_NW) CCDebugString("Zone is North \n");
+					if (facing >= DIR_NE && facing < DIR_SE) CCDebugString("Zone is East \n");
+					if (facing >= DIR_SE && facing < DIR_SW) CCDebugString("Zone is South \n");
+					if (facing >= DIR_SW && facing <= DIR_NW) CCDebugString("Zone is West \n");
+
+					if (facing < DIR_NE || facing > DIR_NW) return(ZONE_NORTH);
+					if (facing >= DIR_NE && facing < DIR_SE) return(ZONE_EAST);
+					if (facing >= DIR_SE && facing < DIR_SW) return(ZONE_SOUTH);
+					return(ZONE_WEST);
+					;
+				}
+			}
+	return(ZONE_NONE);
+}
+
+/***********************************************************************************************
+ * HouseClass::Power_Estimate -- Estimate the power generation using building counts.    	   *
+ *								 Sometimes the correct power is momentarily low because a      *
+ *								 building is not yet online.                                   *
+ *                                                                                             *
+ *			#MinorAIFixes                                                                      *
+ *                                                                                             *
+ * INPUT:   None                                                                               *
+ *                                                                                             *
+ * OUTPUT:  int; Estimate of the power generation including partial constructions              *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   04/11/2020		Created.	                                                               *
+ *=============================================================================================*/
+int HouseClass::Power_Estimate(void)
+{
+	Validate();
+	int x = 0;
+	x = (BQuantity[STRUCT_REFINERY] * 10) + (BQuantity[STRUCT_POWER] * 100) + (BQuantity[STRUCT_ADVANCED_POWER] * 200) + (BQuantity[STRUCT_CONST] * 30);
+	// Lower the estimate a bit in case of damage
+	x = x * 0.9;
+
+	return(x);
+}
+
+/***********************************************************************************************
+ * HouseClass::GenerateRallyPoint -- Finds a Rally point between two bases                     *
+ *                                                                                             *
+ *    This is to determine the mid between two bases in order to generate a rally point for    *
+ *    attack waves in order to group them up.                                                  *
+ *    #MinorAIFixes                                                                            *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  CELL; mid-point between the AI base and the enemy base						       *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   10/11/2020  Created.                                                                      *
+ *=============================================================================================*/
+CELL HouseClass::GenerateRallyPoint(void)
+{
+	int x;
+	int y;
+	int temp_base;
+	int temp_enemy;
+	CELL cell_base = Coord_Cell(Center);
+
+	HouseClass * h = HouseClass::As_Pointer(Enemy);
+	if (!h->IsActive) {
+		CCDebugString("GenerateRallyPoint - Enemy house allegedly not Active \n");
+	}
+	CELL cell_enemy_base = Coord_Cell(h->Center);
+
+	temp_base = Cell_X(cell_base);
+	temp_enemy = Cell_X(cell_enemy_base);
+
+	if (temp_base == temp_enemy) {
+		x = temp_base;
+	}
+	else {
+		if (temp_base > temp_enemy) {
+			x = temp_enemy + ((temp_base - temp_enemy) / 2);
+		}
+		else {
+			x = temp_base + ((temp_enemy - temp_base) / 2);
+		}
+	}
+	temp_base = Cell_Y(cell_base);
+	temp_enemy = Cell_Y(cell_enemy_base);
+	if (temp_base == temp_enemy) {
+		y = temp_base;
+	}
+	else {
+		if (temp_base > temp_enemy) {
+			y = temp_enemy + ((temp_base - temp_enemy) / 2);
+		}
+		else {
+			y = temp_base + ((temp_enemy - temp_base) / 2);
+		}
+	}
+
+	char var4[256];
+	sprintf(var4, "GenerateRallyPoint - own cell=%d \t enemy cell=%d \t x=%d \t y=%d \t new_x=%d \t new_y=%d \n", cell_base, cell_enemy_base, Cell_X(cell_base), Cell_Y(cell_base), x, y);
+	CCDebugString(var4);
+
+	return(XY_Cell(x, y));
 }
 
 #endif

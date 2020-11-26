@@ -1368,6 +1368,12 @@ void UnitClass::Enter_Idle_Mode(bool initial)
 						//
 						// This applies only to non-human houses in a non-normal game type
 						//
+						
+						if (initial && Frame > 1000) {
+							CCDebugString("We found a unit in it's Initial state, telling it to shuffle.\n");
+							House->Shift_Units(this);
+						}
+						
 						order = MISSION_GUARD;
 
 						if (Mission == MISSION_GUARD || Mission == MISSION_GUARD_AREA) {
@@ -4441,4 +4447,104 @@ RTTIType UnitClass::What_Am_I(void) const
 {
 	Validate();
 	return(RTTI_UNIT);
+}
+
+/***********************************************************************************************
+ * UnitClass::Unstick_Harvesters -- Gets any stuck Harvesters moving                           *
+ *                                                                                             *
+ *    #MinorAIFIXES                                                                            *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   20/10/2020 Created.                                                                       *
+ *=============================================================================================*/
+void UnitClass::Unstick_Harvesters(void)
+{
+	Validate();
+
+	if (LastHarvesterCell == 0) {
+		LastHarvesterCell = Coord_Cell(Coord);
+		return;
+	}
+
+	if (Mission == MISSION_HARVEST && !In_Radio_Contact() && Coord_Cell(Coord) == LastHarvesterCell && PrimaryFacing != DIR_SW_X1 && PrimaryFacing != DIR_SW_X2) {
+		CCDebugString("Found a stuck Harvester \n");
+		char var1[256];
+		CELL cell1 = Coord_Cell(Coord);
+		CELL cell2 = Reverse_Cell(PrimaryFacing, Coord_Cell(Coord));
+		sprintf(var1, "Tiberium load=%d \t Current Cell=%d \t LastCell=%d \t Reverse Cell=%d \n", Tiberium_Load(), cell1, LastHarvesterCell, cell2);
+		CCDebugString(var1);
+
+		Assign_Mission(MISSION_MOVE);
+		NavCom = ::As_Target(cell2);
+		LastHarvesterCell = Coord_Cell(Coord);
+	} else {
+		LastHarvesterCell = Coord_Cell(Coord);
+	}
+}
+
+/***********************************************************************************************
+ * UnitClass::Reverse_Cell -- Returns the rearward Cell to an input Direction                  *
+ *                                                                                             *
+ *    #MinorAIFIXES                                                                            *
+ *                                                                                             *
+ * INPUT:   Current Direction, Current Coord                                                   *
+ *                                                                                             *
+ * OUTPUT:  Cell behind the Unit                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   20/10/2020 Created.                                                                       *
+ *=============================================================================================*/
+CELL UnitClass::Reverse_Cell(DirType dir, CELL CurrentLocation)
+{
+	Validate();
+
+	char var2[256];
+	
+	switch (dir) {
+		case DIR_N:
+			sprintf(var2, "Direction is N \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_S));
+		case DIR_NE:
+			sprintf(var2, "Direction is NE \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_SW));
+		case DIR_E:
+			sprintf(var2, "Direction is E \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_W));
+		case DIR_SE:
+			sprintf(var2, "Direction is SE \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_NW));
+		case DIR_S:
+			sprintf(var2, "Direction is S \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_N));
+		case DIR_SW:
+			sprintf(var2, "Direction is SW \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_NE));
+		case DIR_W:
+			sprintf(var2, "Direction is W \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_E));
+		case DIR_NW:
+			sprintf(var2, "Direction is NW \n");
+			CCDebugString(var2);
+			return(Adjacent_Cell(CurrentLocation, DIR_SE));
+		default :
+			CCDebugString("What happened here? \n");
+			return(CurrentLocation);
+	}
+	CCDebugString("Something went really wrong \n");
+	return(CurrentLocation);
 }

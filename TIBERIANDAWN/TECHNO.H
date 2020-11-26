@@ -266,6 +266,7 @@ class TechnoClass :	public RadioClass,
 		void  Kill_Cargo(TechnoClass * source);
 		virtual void Record_The_Kill(TechnoClass * source);
 		virtual bool Target_Something_Nearby(ThreatType threat=THREAT_NORMAL);
+		virtual bool Target_Something_Nearby_Hunt(ThreatType threat=THREAT_NORMAL);
 		virtual void Stun(void);
 		virtual bool In_Range(COORDINATE coord, int which=0) const;
 		virtual bool In_Range(TARGET target, int which=0, bool reciprocal_check = true) const;

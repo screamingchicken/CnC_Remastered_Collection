@@ -4206,6 +4206,59 @@ bool TechnoClass::Target_Something_Nearby(ThreatType threat)
 	return(Target_Legal(TarCom));
 }
 
+/***********************************************************************************************
+ * TechnoClass::Target_Something_Nearby_Hunt -- Handles finding and assigning a nearby target. *
+ *                                                                                             *
+ *    This routine will first search for a nearby target.								       *
+ *    If a nearby target cannot be found, it will look for any target.					       *
+ *		#MinorAIFixes                                                                          *
+ *                                                                                             *
+ * INPUT:   threat   -- The threat control parameter used to control the range searched. The   *
+ *                      only values recognized are THREAT_RANGE and THREAT_AREA.               *
+ *                                                                                             *
+ * OUTPUT:  Was a suitable target aquired and assigned to the TarCom?                          *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   23/11/2020  : Created.                                                                    *
+ *=============================================================================================*/
+bool TechnoClass::Target_Something_Nearby_Hunt(ThreatType threat)
+{
+	threat = threat & (THREAT_RANGE | THREAT_AREA);
+
+	/*
+	**	Determine that if there is an existing target it is still legal
+	**	and within range.
+	*/
+	if (Target_Legal(TarCom)) {
+		if ((threat & THREAT_RANGE) && !In_Range(TarCom)) {
+			Assign_Target(TARGET_NONE);
+		}
+	}
+
+	/*
+	**	If there is no target, then try to find one and assign it as
+	**	the target for this unit.
+	**	First try to find a target in range, then any target on map.
+	*/
+	if (!Target_Legal(TarCom) || !In_Range(TarCom)) {
+		Assign_Target(Greatest_Threat(threat));
+	}
+	if (!Target_Legal(TarCom)) {
+		Assign_Target(Greatest_Threat(THREAT_NORMAL));
+		UnitClass * u = (UnitClass *)this;
+
+		if (*u != UNIT_GUNBOAT) {
+			Assign_Destination(TarCom);
+		}
+	}
+
+	/*
+	**	Return with answer to question: Does this unit have a target?
+	*/
+	return(Target_Legal(TarCom));
+}
 
 /***********************************************************************************************
  * TechnoClass::Exit_Object -- Causes specified object to leave this object.                   *

@@ -564,7 +564,7 @@ HANDLE DebugFile = INVALID_HANDLE_VALUE;
  *=============================================================================================*/
 void CCDebugString (char *string)
 {
-#if (0)
+#ifdef NO_SHROUD
 
 	char outstr[256];
 

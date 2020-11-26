@@ -1156,17 +1156,31 @@ void BuildingClass::AI(void)
 	if (!House->IsHuman && Mission != MISSION_CONSTRUCTION && Mission != MISSION_DECONSTRUCTION) {
 
 		/*
-		**	Possibly start repair process if the building is below half strength.
+		**	Possibly start repair process if the building is below a set strength.
 		*/
-		int ratio = 0x0040;
-		if (Scenario > 6) ratio = 0x0080;
-		if (Scenario > 10) ratio = 0x00C0;
+		int ratio = 0x0040;		// 64 aka 25%
+		if (Scenario > 6) ratio = 0x0080;	// 128 aka 50%
+		if (Scenario > 10) ratio = 0x00C0;	// 192 aka 75%
+		if (GameToPlay != GAME_NORMAL) ratio = 0x00E6;	//Skirmish = 230 aka 90%
+
 		if (Class->IsRepairable && Health_Ratio() <= (unsigned) ratio) {
-			if (House->Available_Money() >= REPAIR_THRESHHOLD) {
+
+			char var1[256];
+			sprintf(var1, "Building - This can be repaired - Money=%d \n", House->Available_Money());
+			CCDebugString(var1);
+
+			/*
+			**	#MinorAIFixes
+			**	Try to repair if Campaign game and over 1000 money, otherwise sell (original logic)
+			**	If skirmish, only sell if we have < 10% health and < 50 money. Otherwise repair
+			*/
+			if (House->Available_Money() >= REPAIR_THRESHHOLD || (GameToPlay != GAME_NORMAL && House->Available_Money() >= 50 ) || (GameToPlay != GAME_NORMAL && Health_Ratio() >= (unsigned)(0x0019))) {
+				CCDebugString("Building - trying to repair \n");
 				Repair(1);
 			} else {
 				if (IsTickedOff && (int)Scenario > 2 && Random_Pick(0, 50) < (int)Scenario && !Trigger) {
 					if (GameToPlay != GAME_NORMAL || Scenario != 15 || PlayerPtr->ActLike != HOUSE_GOOD || *this != STRUCT_TEMPLE) {
+						CCDebugString("Building - trying to sell \n");
 						Sell_Back(1);
 					}
 				}

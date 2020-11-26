@@ -346,6 +346,9 @@ class HouseClass {
 		int Power;					// Current power output.
 		int Drain;					// Power consumption.
 
+		// MinorAIFixes - timer for debug output
+		int LastDebug = 0;
+
 		/*
 		**	For generic (unspecified) reinforcements, they arrive by a common method. This
 		**	specifies which method is to be used.
@@ -568,6 +571,22 @@ class HouseClass {
 		bool AI_Raise_Money(UrgencyType urgency) const;
 		bool AI_Raise_Power(UrgencyType urgency) const;
 		bool AI_Lower_Power(UrgencyType urgency) const;
+//#MinorAIFixes
+		virtual void AI_Harvesters(void);
+		int HarvesterTimeCheck = 0;
+		virtual void Shift_Units(UnitClass * u);
+		int Tiberium_Check(CELL &center, int x, int y) const;
+		ZoneType Zone_Nearest_Tiberium(void) const;
+		int Power_Estimate(void);
+		CELL GenerateRallyPoint(void);
+		typedef enum AttackState : unsigned char {
+			SKIRMISH_NONE = 0,
+			SKIRMISH_RALLYING,
+			SKIRMISH_RALLIED,
+			SKIRMISH_ATTACKING,
+			SKIRMISH_COMPLETED
+		} AttackState;
+		AttackState rallystatus = SKIRMISH_COMPLETED;
 
 		bool Can_Make_Money(void) const {
 			return(Available_Money() > 300 || (BScan & STRUCTF_REFINERY));
@@ -598,7 +617,9 @@ class HouseClass {
 		bool Fire_Sale(void);
 		bool Is_Hack_Prevented(RTTIType rtti, int value) const;
 		bool Is_No_YakMig(void) const;
-		CELL Random_Cell_In_Zone(ZoneType zone) const;
+
+		// #MinorAIFixes - differentiation between find a cell to shuffle units and placing buildings
+		CELL Random_Cell_In_Zone(ZoneType zone, bool BuildingPlacement) const;
 		static void Computer_Paranoid(void);
 		bool Is_Allowed_To_Ally(HousesType house) const;
 		void Do_All_To_Hunt(void) const;

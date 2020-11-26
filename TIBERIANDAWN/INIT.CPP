@@ -844,7 +844,14 @@ bool Select_Game(bool fade)
 	PlayerWins = false;
 	PlayerLoses = false;
 	MPlayerObiWan = false;
+
+// #MinorAIFixes - shroud removal for debugging
+#ifdef NO_SHROUD
+//	Debug_Unshroud = false;
+#else
 	Debug_Unshroud = false;
+#endif
+
 	Map.Set_Cursor_Shape(0);
 	Map.PendingObjectPtr = 0;
 	Map.PendingObject = 0;
@@ -2025,7 +2032,13 @@ bool Parse_Command_Line(int argc, char *argv[])
 
 	Debug_Map = false;
 //	Debug_Play_Map = false;
+
+// #MinorAIFixes - shroud removal for debugging
+#ifdef NO_SHROUD
+//	Debug_Unshroud = false;
+#else
 	Debug_Unshroud = false;
+#endif
 
 	for (int index = 1; index < argc; index++) {
 		char * string;		// Pointer to argument.

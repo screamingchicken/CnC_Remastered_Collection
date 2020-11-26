@@ -103,10 +103,13 @@ RulesClass::RulesClass(void) :
 	WarLimit(2),
 	BarracksRatio(0x0028),
 	BarracksLimit(2),
-	RefineryLimit(4),
-	RefineryRatio(0x0028),
+//#MinorAIFixes - Skirmish AI RefineryLimit 4 -> 6
+	RefineryLimit(6),
+//#MinorAIFixes - Refinery ratio 0x0028 (16%) -> 0x0038 (22%)
+	RefineryRatio(0x0038),
 	AirstripRatio(0x001E),
-	AirstripLimit(5),
+//#MinorAIFixes - Skirmish AI AirStripLimit 5 -> 2 Now the same as War Factories
+	AirstripLimit(2),
 	MaxIQ(5),
 	IQSuperWeapons(4),
 	IQProduction(5),

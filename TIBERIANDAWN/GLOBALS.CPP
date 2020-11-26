@@ -46,7 +46,14 @@ bool Debug_Lose = false;
 bool Debug_Win = false;
 bool Debug_Map = false;					// true = map editor mode
 bool Debug_Passable = false;			// true = show passable/impassable terrain
-bool Debug_Unshroud = false;			// true = hide the shroud
+
+// #MinorAIFixes - shroud removal for debugging
+#ifdef NO_SHROUD
+bool Debug_Unshroud = true;         // true = hide the shroud
+#else
+bool Debug_Unshroud = false;
+#endif
+
 bool Debug_Threat = false;
 bool Debug_Find_Path = false;
 bool Debug_Check_Map = false;			// true = validate the map each frame

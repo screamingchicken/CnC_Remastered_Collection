@@ -176,6 +176,12 @@ class UnitClass :	public TarComClass
 		virtual void Per_Cell_Process(bool center);
 		virtual void Scatter(COORDINATE threat, bool forced=false, bool nokidding=false);
 		void  Exit_Repair(void);
+		
+		// #MinorAIFixes - Unsticking Harvesters
+		virtual void Unstick_Harvesters(void);
+		CELL LastHarvesterCell = 0;
+		virtual CELL Reverse_Cell(DirType, CELL);
+
 //		MoveType Blocking_Object(TechnoClass const *techno, CELL cell) const;
 
 		/*

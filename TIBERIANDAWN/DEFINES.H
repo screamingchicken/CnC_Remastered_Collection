@@ -58,6 +58,12 @@
 #define USE_RA_AI
 
 
+/*
+** #MinorAiFixes - for debugging, disables shroud and turns on debug output file
+*/
+#define NO_SHROUD1
+
+
 /**********************************************************************
 **  Define this to allow play of the bonus missions for the Gateway
 **  bundle deal.
