@@ -57,6 +57,10 @@
 */
 #define USE_RA_AI
 
+/*
+** For debugging, disables shroud and turns on debug output file
+*/
+#define NO_SHROUD
 
 /**********************************************************************
 **  Define this to allow play of the bonus missions for the Gateway
