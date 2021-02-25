@@ -4461,6 +4461,7 @@ void TechnoClass::Draw_Pips(int x, int y, WindowNumberType window)
  * HISTORY:                                                                                    *
  *   07/18/1995 JLB : Created.                                                                 *
  *   08/13/1995 JLB : Recognizes the "IsLeader" method of building preference.                 *
+ *   25/02/2021 #MinorAIFixes : Changes to support distance/busy checks for locating Refinery. *
  *=============================================================================================*/
 BuildingClass * TechnoClass::Find_Docking_Bay(StructType b, bool friendly) const
 {
@@ -4468,7 +4469,7 @@ BuildingClass * TechnoClass::Find_Docking_Bay(StructType b, bool friendly) const
 
 	/*
 	**	First check to see if there are ANY buildings of the specified
-	**	type in thi house's inventory. If not, then don't bother to scan
+	**	type in this house's inventory. If not, then don't bother to scan
 	**	for one.
 	*/
 	if (House->BScan & (1L << b)) {
@@ -4484,21 +4485,50 @@ BuildingClass * TechnoClass::Find_Docking_Bay(StructType b, bool friendly) const
 			/*
 			**	Check to see if the building qualifies (preliminary scan).
 			*/
-			if (building &&
-				(friendly ? building->House->Is_Ally(this) : building->House == House) &&
-				!building->IsInLimbo &&
-				*building == b &&
-				((TechnoClass *)this)->Transmit_Message(RADIO_CAN_LOAD, building) == RADIO_ROGER) {
 
-				/*
-				**	If the building qualifies and this building is better than the
-				**	last qualifying building (as rated by distance), then record
-				**	this building and keep scanning.
-				*/
-				if (bestval == -1 || Distance(building) < bestval || building->IsLeader) {
-					best = building;
-					bestval = Distance(building);
-					if (building->IsLeader) break;
+			// #MinorAIFixes - This code is to factor in distance/busy when finding a Refinery
+			if (b == STRUCT_REFINERY) {
+				if (building &&
+					(friendly ? building->House->Is_Ally(this) : building->House == House) &&
+					!building->IsInLimbo &&
+					*building == b &&
+					((TechnoClass *)this)->Transmit_Message(RADIO_ARE_REFINERY, building) == RADIO_ROGER) {  // Verify it's a Refinery
+
+					/*
+					**	If the building qualifies and this building is better than the
+					**	last qualifying building (as rated by distance), then record
+					**	this building and keep scanning.
+					*/
+					//if (bestval == -1 || building->IsLeader || Distance(building) < bestval) {
+					if (bestval == -1 ||
+						building->IsLeader ||
+						(((TechnoClass *)this)->Transmit_Message(RADIO_CAN_LOAD, building) == RADIO_ROGER && Distance(building) < bestval) ||    // If empty and the nearest, choose it
+						(Distance(building) > 3000 && Distance(building) < bestval) ||				// If distant but still nearest, choose it even if in use. It will likely empty after travelling.
+						(((TechnoClass *)this)->Transmit_Message(RADIO_CAN_LOAD, building) != RADIO_ROGER && Distance(building) < 3000 && Distance(building) + 2000 < bestval)
+						// If it is nearby and is in use, only choose it if it's the best after a modifier.
+						) {
+						best = building;
+						bestval = Distance(building);
+
+						// Re-apply that modifier if needed.
+						if (((TechnoClass *)this)->Transmit_Message(RADIO_CAN_LOAD, building) != RADIO_ROGER && Distance(building) < 3000) { bestval = bestval + 2000; }
+						if (building->IsLeader) break;
+					}
+				}
+			}
+			else {
+				// #MinorAIFixes - This is the original code, still used for finding Helipads and sometimes Repair Depots.
+				if (building &&
+					(friendly ? building->House->Is_Ally(this) : building->House == House) &&
+					!building->IsInLimbo &&
+					*building == b &&
+					((TechnoClass *)this)->Transmit_Message(RADIO_CAN_LOAD, building) == RADIO_ROGER) {
+
+					if (bestval == -1 || Distance(building) < bestval || building->IsLeader) {
+						best = building;
+						bestval = Distance(building);
+						if (building->IsLeader) break;
+					}
 				}
 			}
 		}

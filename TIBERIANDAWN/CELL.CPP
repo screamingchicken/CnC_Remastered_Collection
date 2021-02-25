@@ -2782,6 +2782,7 @@ bool CellClass::Is_Clear_To_Move(bool ignoreinfantry, bool ignorevehicles) const
  *    Returns an object located in the cell. If there is a building present, it                *
  *    returns a pointer to that. If nothing is present in the specified cell,                  *
  *    then it returns NULL.                                                                    *
+ *	  #MinorAIFixes                                                                            *
  *                                                                                             *
  * INPUT:   x,y   -- Coordinate offset (from upper left corner) to use as an aid in selecting  *
  *                   the desired object within the cell.                                       *
@@ -2792,8 +2793,7 @@ bool CellClass::Is_Clear_To_Move(bool ignoreinfantry, bool ignorevehicles) const
  * WARNINGS:   none                                                                            *
  *                                                                                             *
  * HISTORY:                                                                                    *
- *   08/05/1992 JLB : Created.                                                                 *
- *   04/30/1994 JLB : Converted to member function.                                            *
+ *   08/10/2020 : Created.								                                       *
  *=============================================================================================*/
 TechnoClass * CellClass::Cell_Techno_B(int x, int y) const
 {
@@ -2813,6 +2813,60 @@ TechnoClass * CellClass::Cell_Techno_B(int x, int y) const
 		object = Cell_Occupier();
 		while (object && object->IsActive) {
 			if (object->Is_Techno() && object->What_Am_I() == RTTI_BUILDING) {
+				COORDINATE		coord;		// Coordinate relative to cell corner.
+				long		dist;
+
+				coord = object->Center_Coord() & 0x00FF00FFL;
+				dist = Distance(coord, click);
+				if (!close || dist < distance) {
+					close = (TechnoClass *)object;
+					distance = dist;
+				}
+			}
+			object = object->Next;
+		}
+	}
+	return(close);
+}
+
+
+/***********************************************************************************************
+ * CellClass::Cell_Techno_U -- Return with the Unit at specified cell.                         *
+ *                                                                                             *
+ *    Returns an object located in the cell. If there is a Unit present, it                    *
+ *    returns a pointer to that. If nothing is present in the specified cell,                  *
+ *    then it returns NULL.                                                                    *
+ *	  #MinorAIFixes                                                                            *
+ *                                                                                             *
+ * INPUT:   x,y   -- Coordinate offset (from upper left corner) to use as an aid in selecting  *
+ *                   the desired object within the cell.                                       *
+ *                                                                                             *
+ * OUTPUT:  Returns a pointer to a Unit located in cell. If                                    *
+ *          nothing present, just returns NULL.                                                *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   08/10/2020 : Created.								                                       *
+ *=============================================================================================*/
+TechnoClass * CellClass::Cell_Techno_U(int x, int y) const
+{
+	Validate();
+	ObjectClass * object;
+	COORDINATE		click;			// Coordinate of click relative to cell corner.
+	TechnoClass * close = NULL;
+	long		distance = 0;	// Recorded closest distance.
+
+	/*
+	**	Create a coordinate value that represent the pixel location within the cell. This is
+	**	actually the lower significant bits (leptons) of a regular coordinate value.
+	*/
+	click = XY_Coord(Pixel_To_Lepton(x), Pixel_To_Lepton(y));
+
+	if (Cell_Occupier()) {
+		object = Cell_Occupier();
+		while (object && object->IsActive) {
+			if (object->Is_Techno() && object->What_Am_I() == RTTI_UNIT) {
 				COORDINATE		coord;		// Coordinate relative to cell corner.
 				long		dist;
 

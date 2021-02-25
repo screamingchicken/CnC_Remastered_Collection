@@ -59,9 +59,9 @@
 
 
 /*
-** #MinorAiFixes - for debugging, disables shroud and turns on debug output file
+** #MinorAiFixes - for debugging, disables the shroud and turns on debug output file. NO_SHROUD to turn it on.
 */
-#define NO_SHROUD1
+#define NO_SHROUD_OFF
 
 
 /**********************************************************************

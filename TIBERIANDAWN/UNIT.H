@@ -84,7 +84,8 @@ class UnitClass :	public TarComClass
 		bool  Harvesting(void);
 		void  APC_Close_Door(void);
 		void  APC_Open_Door(void);
-		virtual BuildingClass*  Find_Best_Refinery(void) const;
+		// #MinorAIFixes
+		virtual BuildingClass*  Find_Best_Refinery(void); //const;
 
 		/*
 		**	Query functions.
@@ -178,8 +179,8 @@ class UnitClass :	public TarComClass
 		void  Exit_Repair(void);
 		
 		// #MinorAIFixes - Unsticking Harvesters
-		virtual void Unstick_Harvesters(void);
-		CELL LastHarvesterCell = 0;
+		virtual void Unstick_Units(void);
+		CELL UnitPreviousCell = 0;
 		virtual CELL Reverse_Cell(DirType, CELL);
 
 //		MoveType Blocking_Object(TechnoClass const *techno, CELL cell) const;

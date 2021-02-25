@@ -573,7 +573,9 @@ class HouseClass {
 		bool AI_Lower_Power(UrgencyType urgency) const;
 //#MinorAIFixes
 		virtual void AI_Harvesters(void);
+		virtual void AI_Refinery_Blockers(void);
 		int HarvesterTimeCheck = 0;
+		int RefineryTimeCheck = 0;
 		virtual void Shift_Units(UnitClass * u);
 		int Tiberium_Check(CELL &center, int x, int y) const;
 		ZoneType Zone_Nearest_Tiberium(void) const;
@@ -587,6 +589,7 @@ class HouseClass {
 			SKIRMISH_COMPLETED
 		} AttackState;
 		AttackState rallystatus = SKIRMISH_COMPLETED;
+		boolean Is_Traversable(CELL cell) const;
 
 		bool Can_Make_Money(void) const {
 			return(Available_Money() > 300 || (BScan & STRUCTF_REFINERY));

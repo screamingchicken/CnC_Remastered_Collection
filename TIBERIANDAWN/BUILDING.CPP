@@ -233,12 +233,14 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass * from, RadioMessageT
 					}
 					return(RADIO_NEGATIVE);
 
+// #MinorAIFixes - RADIO_CAN_LOAD for Refineries was originally bust, the logic was completely haywire. So have repurposed it as a check to see if 
+// the Refinery is in use. RADIO_HELLO above seems to establish contact, which is not what we want if the Harvester is far away.
 				case STRUCT_REFINERY:
 					if (from->What_Am_I() == RTTI_UNIT &&
 						*((UnitClass *)from) == UNIT_HARVESTER &&
-						(ScenarioInit || !Is_Something_Attached())) {
-
-						return((Contact_With_Whom() != from) ? RADIO_ROGER : RADIO_NEGATIVE);
+						!ScenarioInit &&
+						Mission != MISSION_HARVEST) {
+						return(RADIO_ROGER);
 					}
 					break;
 
@@ -353,7 +355,9 @@ RadioMessageType BuildingClass::Receive_Message(RadioClass * from, RadioMessageT
 		**	state of the building.
 		*/
 		case RADIO_ARE_REFINERY:
-			if (Is_Something_Attached() || In_Radio_Contact() || IsInLimbo || House->Class->House != from->Owner() || (*this != STRUCT_REFINERY/* && *this != STRUCT_REPAIR*/)) {
+// #MinorAIFixes - This was never used in the original code, so repurposing it for usage as the name suggests.
+			//if (Is_Something_Attached() || In_Radio_Contact() || IsInLimbo || House->Class->House != from->Owner() || (*this != STRUCT_REFINERY/* && *this != STRUCT_REPAIR*/)) {
+			if (IsInLimbo || House->Class->House != from->Owner() || *this != STRUCT_REFINERY) {
 				return(RADIO_NEGATIVE);
 			}
 			return(RADIO_ROGER);

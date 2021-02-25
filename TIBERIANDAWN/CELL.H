@@ -203,8 +203,10 @@ class CellClass
 		ObjectClass *  Cell_Find_Object(RTTIType rtti) const;
 		ObjectClass *  Cell_Object(int x=0, int y=0) const;
 		TechnoClass *  Cell_Techno(int x=0, int y=0) const;
-		// #MinorAIFixes - additional function to only return buildings in a cell
+		// #MinorAIFixes - additional function to only return Buildings in a cell
 		TechnoClass *  Cell_Techno_B(int x = 0, int y = 0) const;
+		// #MinorAIFixes - additional function to only return Units in a cell
+		TechnoClass *  Cell_Techno_U(int x = 0, int y = 0) const;
 		TerrainClass *  Cell_Terrain(void) const;
 		UnitClass *  Cell_Unit(void) const;
 		InfantryClass *  Cell_Infantry(void) const;

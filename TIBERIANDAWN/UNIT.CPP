@@ -1369,6 +1369,7 @@ void UnitClass::Enter_Idle_Mode(bool initial)
 						// This applies only to non-human houses in a non-normal game type
 						//
 						
+						// #MinorAIFixes - this will send any new-build Units in Skirmish to a different base Zone to reduce clogging.
 						if (initial && Frame > 1000) {
 							CCDebugString("We found a unit in it's Initial state, telling it to shuffle.\n");
 							House->Shift_Units(this);
@@ -2432,7 +2433,7 @@ bool UnitClass::Goto_Tiberium(void)
 }
 
 
-BuildingClass* UnitClass::Find_Best_Refinery(void) const
+BuildingClass* UnitClass::Find_Best_Refinery(void) //const
 {
 	/*
 	**	Remember our last refinery and prefer that one, if still available and valid.
@@ -2441,9 +2442,18 @@ BuildingClass* UnitClass::Find_Best_Refinery(void) const
 		if (TiberiumUnloadRefinery->House == House &&
 			!TiberiumUnloadRefinery->IsInLimbo &&
 			TiberiumUnloadRefinery->Mission != MISSION_DECONSTRUCTION &&
-			*TiberiumUnloadRefinery == STRUCT_REFINERY) {
-			return TiberiumUnloadRefinery;
-		} else {
+			*TiberiumUnloadRefinery == STRUCT_REFINERY
+			) {
+
+			// #MinorAIFixes - Now checking TiberiumUnloadRefinery is unused if it's set and we're close to it, otherwise look for another Refinery.
+			if (Distance((AbstractClass const *)TiberiumUnloadRefinery) < 800 && Transmit_Message(RADIO_CAN_LOAD, TiberiumUnloadRefinery) == RADIO_ROGER) {
+				return TiberiumUnloadRefinery;
+			}
+			else {
+				TiberiumUnloadRefinery = NULL;
+			}
+		}
+		else {
 			TiberiumUnloadRefinery = NULL;
 		}
 	}
@@ -4450,8 +4460,12 @@ RTTIType UnitClass::What_Am_I(void) const
 }
 
 /***********************************************************************************************
- * UnitClass::Unstick_Harvesters -- Gets any stuck Harvesters moving                           *
+ * UnitClass::Unstick_Units -- Gets any stuck Harvesters moving to the Cell behind them.	   *
+ *                             Once they've moved there, they will be picked up by the         *
+ *                             normal Idle code and be sent to Tib/Refinery as needed.         *
  *                                                                                             *
+ *                             Also will now move Units off the Refinery lower Cells           *
+ *                             if they have strayed there.                                     *
  *    #MinorAIFIXES                                                                            *
  *                                                                                             *
  * INPUT:   none                                                                               *
@@ -4463,28 +4477,41 @@ RTTIType UnitClass::What_Am_I(void) const
  * HISTORY:                                                                                    *
  *   20/10/2020 Created.                                                                       *
  *=============================================================================================*/
-void UnitClass::Unstick_Harvesters(void)
+void UnitClass::Unstick_Units(void)
 {
 	Validate();
 
-	if (LastHarvesterCell == 0) {
-		LastHarvesterCell = Coord_Cell(Coord);
+	if (UnitPreviousCell == 0) {
+		UnitPreviousCell = Coord_Cell(Coord);
 		return;
 	}
 
-	if (Mission == MISSION_HARVEST && !In_Radio_Contact() && Coord_Cell(Coord) == LastHarvesterCell && PrimaryFacing != DIR_SW_X1 && PrimaryFacing != DIR_SW_X2) {
-		CCDebugString("Found a stuck Harvester \n");
-		char var1[256];
-		CELL cell1 = Coord_Cell(Coord);
-		CELL cell2 = Reverse_Cell(PrimaryFacing, Coord_Cell(Coord));
-		sprintf(var1, "Tiberium load=%d \t Current Cell=%d \t LastCell=%d \t Reverse Cell=%d \n", Tiberium_Load(), cell1, LastHarvesterCell, cell2);
-		CCDebugString(var1);
+	if (*this == UNIT_HARVESTER) {                  // Unit is a Harvester that has stopped, need to move it one Cell
+		if (Mission == MISSION_HARVEST && !In_Radio_Contact() && Coord_Cell(Coord) == UnitPreviousCell && PrimaryFacing != DIR_SW_X1 && PrimaryFacing != DIR_SW_X2) {
+			CELL cell1 = Coord_Cell(Coord);
+			CELL cell2 = Reverse_Cell(PrimaryFacing, Coord_Cell(Coord));
 
-		Assign_Mission(MISSION_MOVE);
-		NavCom = ::As_Target(cell2);
-		LastHarvesterCell = Coord_Cell(Coord);
-	} else {
-		LastHarvesterCell = Coord_Cell(Coord);
+			CCDebugString("Unstick Units - Found a stuck Harvester \n");
+			char var1[256];
+			sprintf(var1, "Tiberium load=%d \t Current Cell=%d \t LastCell=%d \t Reverse Cell=%d \n", Tiberium_Load(), cell1, UnitPreviousCell, cell2);
+			CCDebugString(var1);
+
+			Assign_Mission(MISSION_MOVE);
+			NavCom = ::As_Target(cell2);
+			UnitPreviousCell = Coord_Cell(Coord);
+		}
+		else {										// Unit is a Harvester, but all is ok
+			UnitPreviousCell = Coord_Cell(Coord);
+		}
+	}
+	else {                                          // Unit is a non-Harvester sitting on a Refinery Cell, need to send it elsewhere
+		if (Coord_Cell(Coord) == UnitPreviousCell) {
+			CCDebugString("Unstick Units - Found a Unit sitting on the Refinery \n");
+			House->Shift_Units(this);               // Call back to the House code to move the Unit to a different Zone
+		}
+		else {
+			UnitPreviousCell = Coord_Cell(Coord);
+		}
 	}
 }
 
@@ -4548,3 +4575,4 @@ CELL UnitClass::Reverse_Cell(DirType dir, CELL CurrentLocation)
 	CCDebugString("Something went really wrong \n");
 	return(CurrentLocation);
 }
+

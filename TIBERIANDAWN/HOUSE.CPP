@@ -14,6 +14,7 @@
 // with this program. If not, see https://github.com/electronicarts/CnC_Remastered_Collection
 
 /* $Header:   F:\projects\c&c\vcs\code\house.cpv   2.13   02 Aug 1995 17:03:50   JOE_BOSTIC  $ */
+
 /***********************************************************************************************
  ***             C O N F I D E N T I A L  ---  W E S T W O O D   S T U D I O S               ***
  ***********************************************************************************************
@@ -89,13 +90,22 @@
  *   HouseClass::Suggest_New_Object -- Determine what would the next buildable object be.      *
  *   HouseClass::Suggested_New_Team -- Determine what team should be created.                  *
  *   HouseClass::Suspend_Production -- Temporarily puts production on hold.                    *
- *   HouseClass::Validate -- validates house pointer														  *
+ *   HouseClass::Validate -- validates house pointer		   	 			 				   *
  *   HouseClass::Write_INI -- Writes house specific data into INI file.                        *
  *   HouseClass::delete -- Deallocator function for a house object.                            *
  *   HouseClass::new -- Allocator for a house class.                                           *
  *   HouseClass::operator HousesType -- Conversion to HousesType operator.                     *
- *   HouseClass::~HouseClass -- Default destructor for a house object.                         *
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+ *   HouseClass::~HouseClass -- Default destructor for a house object.                         */
+
+ /*	 HouseClass::AI_Harvesters -- Checks for stuck Harvesters.								   *
+  *	 HouseClass::Shift_Units -- Moves any new build Units to a different base Zone.			   *
+  *	 HouseClass::Tiberium_Check -- Determines size of Tiberium field.						   *
+  *	 HouseClass::Zone_Nearest_Tiberium -- Which base Zone is nearest Tiberium.				   *
+  *	 HouseClass::Power_Estimate -- Normal power calc misses newly built Power Plants.		   *
+  *	 HouseClass::GenerateRallyPoint -- Creates a staging point for attacking Units.            *
+  *	 HouseClass::AI_Refinery_Blockers -- Checks for Units bumped onto Refinery base.           *
+  *	 HouseClass::Is_Traversable -- Is a Cell impassable, used for Turret placement.            *
+  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #include	"function.h"
 
@@ -107,16 +117,16 @@
 
 
 /***********************************************************************************************
- * HouseClass::Validate -- validates house pointer															  *
+ * HouseClass::Validate -- validates house pointer												*
  *                                                                                             *
  * INPUT:                                                                                      *
- *		none.																												  *
+ *		none.																				  *
  *                                                                                             *
  * OUTPUT:                                                                                     *
- *		1 = ok, 0 = error																								  *
+ *		1 = ok, 0 = error																	  *
  *                                                                                             *
  * WARNINGS:                                                                                   *
- *		none.																												  *
+ *		none.																				  *
  *                                                                                             *
  * HISTORY:                                                                                    *
  *   08/09/1995 BRR : Created.                                                                 *
@@ -928,7 +938,7 @@ void HouseClass::AI(void)
 	NewActiveUScan = 0;
 	NewActiveAScan = 0;
 
-// #minorAIFixes - debug output to show up which Houses are in the game
+// #MinorAIFixes - debug output to show which Houses are in the game
 	if (Frame < 2 && this->Class->House == HOUSE_GOOD) { CCDebugString("House AI - This is HOUSE_GOOD \n"); }
 	if (Frame < 2 && this->Class->House == HOUSE_BAD) { CCDebugString("House AI - This is HOUSE_BAD \n"); }
 	if (Frame < 2 && this->Class->House == HOUSE_NEUTRAL) { CCDebugString("House AI - This is HOUSE_NEUTRAL \n"); }
@@ -938,6 +948,10 @@ void HouseClass::AI(void)
 	if (Frame < 2 && this->Class->House == HOUSE_MULTI4) { CCDebugString("House AI - This is HOUSE_MULTI4 \n"); }
 	if (Frame < 2 && this->Class->House == HOUSE_MULTI5) { CCDebugString("House AI - This is HOUSE_MULTI5 \n"); }
 	if (Frame < 2 && this->Class->House == HOUSE_MULTI6) { CCDebugString("House AI - This is HOUSE_MULTI6 \n"); }
+
+	if (IsHuman && Frame == 20) {
+		On_Message("Minor AI Improvements AI v1.4", 5.0f, -1);
+	}
 
 #ifdef USE_RA_AI
 	//
@@ -1626,8 +1640,9 @@ void HouseClass::AI(void)
 		AI_Vessel();
 		AI_Infantry();
 		AI_Aircraft();
-// #MinorAIFixes - call the Harvester unsticking code	
+// #MinorAIFixes - call the stuck-Harvester code and clears any wayward Units from underneath Refineries
 		AI_Harvesters();
+		AI_Refinery_Blockers();
 	}
 #endif
 
@@ -5247,7 +5262,7 @@ COORDINATE HouseClass::Find_Build_Location(BuildingClass * building) const
 	if (*building == STRUCT_REFINERY) {
 		zone = Zone_Nearest_Tiberium();
 		if (zone != ZONE_NONE) {
-			CCDebugString("We found a Zone nearest Tiberium \n");
+			CCDebugString("Placing Refinery - We found a Zone nearest Tiberium \n");
 			zcell = Find_Cell_In_Zone(building, zone);
 		}
 	}
@@ -5512,7 +5527,7 @@ int HouseClass::Expert_AI(void)
 				value += h->CurUnits - CurUnits;
 				value += h->CurBuildings - CurBuildings;
 
-// MinorAIFixes if AI is negative, this integer can overflow. Not sure why or if it's just a debugging issue.
+// MinorAIFixes - If Infantry difference is negative, this integer can overflow. Not sure why or if it's just a debugging issue.
 				if (h->CurInfantry >= CurInfantry) {
 					value += max(h->CurInfantry - CurInfantry, 0) / 4;
 				}
@@ -5572,12 +5587,12 @@ int HouseClass::Expert_AI(void)
 		}
 		if (Control.MaxUnit < (unsigned)maxunit + 10) {
 
-			// #MinorAIFixes - raise the Unit limit
+// #MinorAIFixes - raise the Unit limit
 //			Control.MaxUnit = maxunit + 10;
 			Control.MaxUnit = 150;
 		}
 		if (Control.MaxInfantry < (unsigned)maxinfantry + 10) {
-			// #MinorAIFixes - fix the Infantry limit
+// #MinorAIFixes - Fix the Infantry limit, doesn't need to be too high for Skirmish because Infantry are trash.
 //			Control.MaxInfantry = maxinfantry + 10;
 			Control.MaxInfantry = 10;
 		}
@@ -5609,7 +5624,7 @@ int HouseClass::Expert_AI(void)
 				State = STATE_BUILDUP;
 			}
 		}
-// #MinorAIFixes - stopped it from being in STATE_ATTACKED in the first minute
+// #MinorAIFixes - This stops it from being in STATE_ATTACKED in the first minute of the game
 		if (State == STATE_ATTACKED && (LATime == 0 || LATime + 1942 < Frame)) {
 			State = STATE_BUILDUP;
 			CCDebugString("Changing state - Buildup \n");
@@ -5995,7 +6010,7 @@ bool HouseClass::AI_Attack(UrgencyType )
 	}
 
 	/*
-	**	#MinorAIfixes - dont't use Infantry to set rallystatus enum, their 75% chance of attacking messes with it.
+	**	#MinorAIfixes - dont't use Infantry to set the rallystatus enum, their 75% chance of attacking messes with it.
 	*/
 	if (CurInfantry > 0) {
 		for (index = 0; index < Infantry.Count(); index++) {
@@ -6455,7 +6470,7 @@ int HouseClass::AI_Building(void)
 		**	money available.
 		*/
 		b = &BuildingTypeClass::As_Reference(STRUCT_ADVANCED_POWER);
-// #MinorAIFixes - Compensate for when an adv power has just been built but is not yet online
+// #MinorAIFixes - Compensate for the brief timespan when an Adv Power has just been built but is not yet online
 		if (Can_Build(b, ActLike) && (Power <= Drain+Rule.PowerSurplus && Power_Estimate() <= Drain + Rule.PowerSurplus) && b->Cost_Of() < money) {
 			choiceptr = BuildChoice.Alloc();
 			if (choiceptr != NULL) {
@@ -6565,7 +6580,7 @@ int HouseClass::AI_Building(void)
 
 		/*
 		**	An airstrip would be good.
-		**  #MinorAIFixes - Removed all the leftover RA code for RA airstrips.
+		**  #MinorAIFixes - Cleaned up all the leftover RA code for Soviet airstrips.
 		*/
 		current = BQuantity[STRUCT_AIRSTRIP];
 		if (current < Round_Up(Rule.AirstripRatio*fixed(CurBuildings)) && current < (unsigned)Rule.AirstripLimit && (money > 2000 || hasincome)) {
@@ -6893,7 +6908,7 @@ int HouseClass::AI_Unit(void)
 		for (index = UNIT_FIRST; index < UNIT_COUNT; index++) {
 			UnitTypeClass const * utype = &UnitTypeClass::As_Reference(index);
 // #MinorAIFixes - Seems unlikely it would ever try to build an MCV, but stop that anyway. Also stop the Arty/Stealth building.
-//                 If the base is under attack, stop building Flame/Light tanks, only build serious stuff.
+//                 If the base is under attack, stop building Flame/Light tanks, only build the serious stuff.
 			if (State == STATE_ATTACKED) {
 				if (Can_Build(utype, ActLike) && utype->Type != UNIT_HARVESTER && utype->Type != UNIT_MCV && utype->Type != UNIT_ARTY && utype->Type != UNIT_STANK && utype->Type != UNIT_LTANK
 					&& utype->Type != UNIT_LTANK) {
@@ -7171,7 +7186,7 @@ int HouseClass::AI_Infantry(void)
 #endif
 	}
 
-// #MinorAIFixes - stop building Infantry in the mid-late game
+// #MinorAIFixes - stop building any Infantry in the mid-late game
 	if (IsBaseBuilding && CurBuildings < 10) {
 		HouseClass const * enemy = NULL;
 		if (Enemy != HOUSE_NONE) {
@@ -8702,6 +8717,11 @@ CELL HouseClass::Find_Cell_In_Zone(TechnoClass const * techno, ZoneType zone) co
 
 	int bestval = -1;
 	int bestcell = 0;
+	bool turret = false;
+	bool northblocked = false;
+	bool southblocked = false;
+	bool eastblocked = false;
+	bool westblocked = false;
 	TechnoTypeClass const * ttype = techno->Techno_Type_Class();
 
 	/*
@@ -8712,6 +8732,15 @@ CELL HouseClass::Find_Cell_In_Zone(TechnoClass const * techno, ZoneType zone) co
 	short const * list = NULL;
 	if (techno->What_Am_I() == RTTI_BUILDING) {
 		list = techno->Occupy_List(true);
+		
+		/*
+		**	#MinorAIfixes - Determine if we're trying to place a single-cell turret.
+		**  We don't want to place it somewhere it will block Units traversing
+		*/
+		if ( *(BuildingClass *)techno == STRUCT_ATOWER || *(BuildingClass *)techno == STRUCT_GTOWER || *(BuildingClass *)techno == STRUCT_TURRET || *(BuildingClass *)techno == STRUCT_OBELISK) {
+			turret = true;
+			CCDebugString("Find Cell In Zone - Attempting to place a turret \n");
+		}
 	}
 
 	/*
@@ -8721,18 +8750,66 @@ CELL HouseClass::Find_Cell_In_Zone(TechnoClass const * techno, ZoneType zone) co
 	for (CELL cell = 0; cell < MAP_CELL_TOTAL; cell++) {
 //		if (Map.In_Radar(cell)) {
 		if (Map.In_Radar(cell) && Which_Zone(cell) != ZONE_NONE) {
-			bool ok = ttype->Legal_Placement(cell);
 
 			/*
-			**	Another (adjacency) check is required for buildings.
+			**	#MinorAIFixes - Reverse the order of these If statements. Check for new best value (via distance) first, then perform the validity checks.
 			*/
-			if (ok && list != NULL && !Map.Passes_Proximity_Check(ttype, techno->House->Class->House, list, cell)) {
-				ok = false;
-			}
+			int dist = Distance(Cell_Coord(cell), Cell_Coord(trycell));
 
-			if (ok) {
-				int dist = Distance(Cell_Coord(cell), Cell_Coord(trycell));
-				if (bestval == -1 || dist < bestval) {
+			if (bestval == -1 || dist < bestval) {
+				bool ok = ttype->Legal_Placement(cell);
+
+				/*
+				**	Another (adjacency) check is required for buildings.
+				*/
+				if (ok && list != NULL && !Map.Passes_Proximity_Check(ttype, techno->House->Class->House, list, cell)) {
+					ok = false;
+				}
+
+				// #MinorAIFixes - check the N/S/E/W cells around the potential placement cell
+				if (ok && turret) {
+//					CELL checkcell = (CELL)(cell + AdjacentCell[FACING_N]);
+					if (ok && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_N]))) {				// Check if N Cell is blocked.
+						northblocked = true;
+					}
+					if (ok && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_S]))) {				// Check if S Cell is blocked.
+						southblocked = true;
+					}
+					if (ok && northblocked && southblocked) {
+						CCDebugString("Find Cell In Zone - Turret placement N/S are blocked \n");
+						ok = false;
+					}
+					
+					if (ok && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_E]))) {				// Check if E Cell is blocked.
+						eastblocked = true;
+					}
+					if (ok && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_W]))) {				// Check if W Cell is blocked.
+						westblocked = true;
+					}
+					if (ok && eastblocked && westblocked) {
+						CCDebugString("Find Cell In Zone - Turret placement N/S are blocked \n");
+						ok = false;
+					}
+					// Lots of checks to see if we're going to block a diagonal path. Originally this was all much cleaner.
+					if (ok && northblocked && eastblocked && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_NE]))) {
+						ok = false;
+						CCDebugString("Find Cell In Zone - Turret placement NE diag blocked \n");
+					}
+					if (ok && eastblocked && southblocked && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_SE]))) {
+						ok = false;
+						CCDebugString("Find Cell In Zone - Turret placement SE diag blocked \n");
+					}
+					if (ok && southblocked && westblocked && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_SW]))) {
+						ok = false;
+						CCDebugString("Find Cell In Zone - Turret placement SW diag blocked \n");
+					}
+					if (ok && westblocked && northblocked && !Is_Traversable((CELL)(cell + AdjacentCell[FACING_NW]))) {
+						ok = false;
+						CCDebugString("Find Cell In Zone - Turret placement NW diag blocked \n");
+					}
+				}
+
+				if (ok) {
 					bestval = dist;
 					bestcell = cell;
 				}
@@ -8816,7 +8893,7 @@ CELL HouseClass::Random_Cell_In_Zone(ZoneType zone, bool BuildingPlacement) cons
 				*/
 				cell = Coord_Cell(Center);
 				char string1[256];
-				sprintf(string1, "Random Cell - Failed so picking centre cell - %d \n", cell);
+				sprintf(string1, "Random Cell for parking Unit - Failed so picking centre cell - %d \n", cell);
 				CCDebugString(string1);
 			}
 			else {
@@ -8830,7 +8907,7 @@ CELL HouseClass::Random_Cell_In_Zone(ZoneType zone, bool BuildingPlacement) cons
 		else {
 			cell = Coord_Cell(coord);
 			char string2[256];
-			sprintf(string2, "Random Cell - Succeeded, cell is - %d \n", cell);
+			sprintf(string2, "Random Cell for parking Unit - Succeeded, cell is - %d \n", cell);
 			CCDebugString(string2);
 		}
 
@@ -8857,24 +8934,22 @@ CELL HouseClass::Random_Cell_In_Zone(ZoneType zone, bool BuildingPlacement) cons
 		TechnoClass * tech_N = cellptr_N->Cell_Techno_B();
 		TechnoClass * tech_NE = cellptr_NE->Cell_Techno_B();
 
-		//Still crashing ??
-		// techno is null? getting called by building placement code?
 		if (tech_NW) {
 			if (tech_NW->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)tech_NW) == STRUCT_REFINERY) {
 				IsUnderRefinery = true;
-				CCDebugString("Random Cell - The NW cell is under a Refinery \n");
+				CCDebugString("Moving Unit to random Cell - The NW cell is under a Refinery \n");
 			}
 		}
 		if (tech_N) {
 			if (tech_N->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)tech_N) == STRUCT_REFINERY) {
 				IsUnderRefinery = true;
-				CCDebugString("Random Cell - The N cell is under a Refinery \n");
+				CCDebugString("Moving Unit to random Cell - The N cell is under a Refinery \n");
 			}
 		}
 		if (tech_NE) {
 			if (tech_NE->What_Am_I() == RTTI_BUILDING && *((BuildingClass*)tech_NE) == STRUCT_REFINERY) {
 				IsUnderRefinery = true;
-				CCDebugString("Random Cell - The NE cell is under a Refinery \n");
+				CCDebugString("Moving Unit to random Cell - The NE cell is under a Refinery \n");
 			}
 		}
 	} while (IsUnderRefinery != false && !BuildingPlacement);
@@ -8902,7 +8977,7 @@ unsigned HouseClass::Get_Ally_Flags()
 
 /***********************************************************************************************
  * HouseClass::AI_Harvesters --  Get any harvesters which have crashed into each other         *
- *								 moving again. Checks the Harvester location every 6 seconds   *
+ *								 moving again. Checks the Harvester location every 10 seconds  *
  *                                                                                             *
  *			#MinorAIFixes                                                                      *
  *                                                                                             *
@@ -8918,16 +8993,16 @@ unsigned HouseClass::Get_Ally_Flags()
 void HouseClass::AI_Harvesters(void)
 {
 	Validate();
-	if ((Frame / 323) > HarvesterTimeCheck) {
+	if ((Frame / 323) > HarvesterTimeCheck) {             // Check roughly every 10 seconds
 		if (UQuantity[UNIT_HARVESTER] > 0) {
 			for (int index = 0; index < Units.Count(); index++) {
 				UnitClass * u = Units.Ptr(index);
 				if (u != NULL && !u->IsInLimbo && u->House == this && u->Strength > 0 && *u == UNIT_HARVESTER) {
-					u->Unstick_Harvesters();
+					u->Unstick_Units();
 				}
 			}
 		}
-		HarvesterTimeCheck = (Frame / (323));
+		HarvesterTimeCheck = (Frame / (323));             // Update the timer
 	}
 	return;
 }
@@ -9114,7 +9189,7 @@ ZoneType HouseClass::Zone_Nearest_Tiberium(void) const
 /***********************************************************************************************
  * HouseClass::Power_Estimate -- Estimate the power generation using building counts.    	   *
  *								 Sometimes the correct power is momentarily low because a      *
- *								 building is not yet online.                                   *
+ *								 building is in it's animation phase and not yet online.       *
  *                                                                                             *
  *			#MinorAIFixes                                                                      *
  *                                                                                             *
@@ -9142,7 +9217,10 @@ int HouseClass::Power_Estimate(void)
  * HouseClass::GenerateRallyPoint -- Finds a Rally point between two bases                     *
  *                                                                                             *
  *    This is to determine the mid between two bases in order to generate a rally point for    *
- *    attack waves in order to group them up.                                                  *
+ *    attack waves in order to group them up. It's not the ideal solution, which would be to   *
+ *    generate a path between the two bases and find a clear zone, but pathing is very tied to *
+ *    Footclass objects, making it difficult to utilise outside of those.                      *
+ *                                                                                             *
  *    #MinorAIFixes                                                                            *
  *                                                                                             *
  * INPUT:   none                                                                               *
@@ -9160,18 +9238,18 @@ CELL HouseClass::GenerateRallyPoint(void)
 	int y;
 	int temp_base;
 	int temp_enemy;
-	CELL cell_base = Coord_Cell(Center);
+	CELL cell_base = Coord_Cell(Center);                // Find center of our base
 
 	HouseClass * h = HouseClass::As_Pointer(Enemy);
 	if (!h->IsActive) {
 		CCDebugString("GenerateRallyPoint - Enemy house allegedly not Active \n");
 	}
-	CELL cell_enemy_base = Coord_Cell(h->Center);
+	CELL cell_enemy_base = Coord_Cell(h->Center);       // Find center of base of previously designated enemy
 
 	temp_base = Cell_X(cell_base);
 	temp_enemy = Cell_X(cell_enemy_base);
 
-	if (temp_base == temp_enemy) {
+	if (temp_base == temp_enemy) {                      // Generate the Rally X location
 		x = temp_base;
 	}
 	else {
@@ -9182,9 +9260,10 @@ CELL HouseClass::GenerateRallyPoint(void)
 			x = temp_base + ((temp_enemy - temp_base) / 2);
 		}
 	}
+	
 	temp_base = Cell_Y(cell_base);
 	temp_enemy = Cell_Y(cell_enemy_base);
-	if (temp_base == temp_enemy) {
+	if (temp_base == temp_enemy) {                       // Generate the Rally Y location
 		y = temp_base;
 	}
 	else {
@@ -9201,6 +9280,152 @@ CELL HouseClass::GenerateRallyPoint(void)
 	CCDebugString(var4);
 
 	return(XY_Cell(x, y));
+}
+
+/***********************************************************************************************
+ * HouseClass::AI_Refinery_Blockers --  Checks for Units that might have been bumped onto the  *
+ *										base of AI Refineries. Checks the locations for		   *
+ *                                      possible blockers every 30 seconds.                    *
+ *                                                                                             *
+ *			#MinorAIFixes                                                                      *
+ *                                                                                             *
+ * INPUT:   none																			   *
+ *                                                                                             *
+ * OUTPUT:  none                                                                               *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   22/12/2020 Created.                                                                       *
+ *=============================================================================================*/
+void HouseClass::AI_Refinery_Blockers(void)
+{
+	Validate();
+	CELL cell;
+
+	if ((Frame / 971) > RefineryTimeCheck) {
+
+		if (BQuantity[STRUCT_REFINERY] > 0) {
+			for (int index = 0; index < Buildings.Count(); index++) {
+				BuildingClass * b = Buildings.Ptr(index);
+				if (b && !b->IsInLimbo && b->House == this && b->Strength > 0 && *b == STRUCT_REFINERY) {
+
+					cell = Coord_Cell(b->Center_Coord());
+
+					CellClass * cellptr_SW = &Map[(CELL)(cell + AdjacentCell[FACING_SW])];
+					CellClass * cellptr_SW_W = &Map[(CELL)(cellptr_SW->Cell_Number() + AdjacentCell[FACING_W])];
+					CellClass * cellptr_S = &Map[(CELL)(cell + AdjacentCell[FACING_S])];
+					CellClass * cellptr_SE = &Map[(CELL)(cell + AdjacentCell[FACING_SE])];
+					CellClass * cellptr_SE_E = &Map[(CELL)(cellptr_SE->Cell_Number() + AdjacentCell[FACING_E])];
+
+					// Grab any the Units in the 5 Cells below the Refinery
+					TechnoClass * tech_SW = cellptr_SW->Cell_Techno_U();
+					TechnoClass * tech_SW_W = cellptr_SW_W->Cell_Techno_U();
+					TechnoClass * tech_S = cellptr_S->Cell_Techno_U();
+					TechnoClass * tech_SE = cellptr_SE->Cell_Techno_U();
+					TechnoClass * tech_SE_E = cellptr_SE_E->Cell_Techno_U();
+
+					// Convert from Techno to Unit
+					UnitClass * u = (UnitClass*)tech_SW_W;
+					// Call the Unstick function to check if the Unit is not moving
+					if (u && *u != UNIT_HARVESTER) {
+						CCDebugString("RefineryBlockers - culprit in SW-1 cell \n");
+						u->Unstick_Units();
+					}
+					u = (UnitClass*)tech_SW;
+					if (u && *u != UNIT_HARVESTER) {
+						CCDebugString("RefineryBlockers - culprit in SW cell \n");
+						u->Unstick_Units();
+					}
+					u = (UnitClass*)tech_S;
+					if (u && *u != UNIT_HARVESTER) {
+						CCDebugString("RefineryBlockers - culprit in S cell \n");
+						u->Unstick_Units();
+					}
+					u = (UnitClass*)tech_SE;
+					if (u && *u != UNIT_HARVESTER) {
+						CCDebugString("RefineryBlockers - culprit in SE cell \n");
+						u->Unstick_Units();
+					}
+					u = (UnitClass*)tech_SE_E;
+					if (u && *u != UNIT_HARVESTER) {
+						CCDebugString("RefineryBlockers - culprit in SE+1 cell \n");
+						u->Unstick_Units();
+					}
+
+				}
+			}
+		}
+		RefineryTimeCheck = (Frame / (971));
+	}
+	return;
+}
+
+/***********************************************************************************************
+ * HouseClass::Is_Traversable -- Determines cell if a Cell is permanently impassable. Slightly *
+ *                               different to Is_Clear_To_Move() as that treats Vehicles &     *
+ *                               Buildings the same.                                           *
+ *                                                                                             *
+ *    Used for helping with Turret placement to stop blocking pathways                         *
+ *                                                                                             *
+ *		#MinorAIFixes                                                                          *
+ *                                                                                             *
+ * INPUT:   cell     -- The cell to examine.                                                   *
+ *                                                                                             *
+ * OUTPUT:  Boolean true/false														           *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   26/01/2021 Created.		                                                               *
+ *=============================================================================================*/
+boolean HouseClass::Is_Traversable(CELL cell) const
+{
+	Validate();
+	CellClass const * cellptr = &Map[cell];
+
+	// Cell validation from the original code.
+	if ((unsigned)cell >= MAP_CELL_TOTAL) return(false);
+
+	//	Edge of the map is not traversable, except by Loaner vehicles, so return false.
+	if (!ScenarioInit && !Map.In_Radar(cell)) {
+		return(false);
+	}
+
+	//	Check if the overlay is Crates or Walls. AI apparently can't pickup Crates.
+	if (cellptr->Overlay != OVERLAY_NONE) {
+		OverlayTypeClass const * optr = &OverlayTypeClass::As_Reference(cellptr->Overlay);
+
+		if (optr->IsCrate && !IsHuman) {
+			return(false);
+		}
+		if (optr->IsWall) {
+			return(false);
+		}
+	}
+
+//	If the cell is impassable because of underlying terrain, then return this.
+//	if (!Ground[cellptr->Land_Type()].Cost[SPEED_TRACK]) {
+//		return(false);
+//	}
+
+//	Loop through all of the objects in the square checking for any buildings.
+//	ObjectClass *obj = cellptr->Cell_Occupier();
+//	while (obj) {
+//		if (obj->What_Am_I() == RTTI_BUILDING) return(false);
+//			Move to next object in chain.
+//		obj = obj->Next;
+//	}
+
+// Check the Flags on the Cell for Buildings or Terrain
+	int composite = cellptr->Flag.Composite;
+	composite &= 0xC0;			// Drop the infantry and vehicle occupation bits. Should replace above two checks.
+	if (composite != 0) {
+		return(false);
+	}
+
+	//	All checks passed, so return with cell being traversable.
+	return(true);
 }
 
 #endif
