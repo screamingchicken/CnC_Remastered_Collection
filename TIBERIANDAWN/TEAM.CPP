@@ -156,6 +156,7 @@ TeamClass::~TeamClass(void)
 	if (GameActive && Class) {
 		Number[TeamTypes.ID(Class)]--;
 		while (Member) {
+			CCDebugString("BLAH 5 \n");
 			Remove(Member);
 		}
 
@@ -780,6 +781,7 @@ bool TeamClass::Add(FootClass * obj, int typeindex)
  *=============================================================================================*/
 bool TeamClass::Remove(FootClass * obj, int typeindex)
 {
+	CCDebugString("Team - Remove was called \n");
 	Validate();
 	/*
 	**	Make sure that the object is in fact a member of this team. If not, then it can't
@@ -1530,4 +1532,50 @@ void TeamClass::Suspend_Teams(int priority)
 			team->Suspended = true;
 		}
 	}
+}
+
+/***************************************************************************
+ * TeamClass::What_Team_Mission -- Returns current mission of this Team	   *
+ *                                                                         *
+ *       #MinorAIFixes                                                     *
+ *                                                                         *
+ * INPUT:	none														   *
+ *                                                                         *
+ * OUTPUT: TeamMissionType of the current Team.                            *
+ *                                                                         *
+ * WARNINGS:                                                               *
+ *                                                                         *
+ * HISTORY:                                                                *
+ *   17/05/2021 Created.	                                               *
+ *=========================================================================*/
+TeamMissionType TeamClass::What_Team_Mission(void)
+{
+	Validate();
+	TeamMissionStruct const * mission = &Class->MissionList[CurrentMission];
+
+	return(mission->Mission);
+}
+
+/***************************************************************************
+ * TeamClass::Coordinate_Target -- Assign an override Target to the Team   *
+ *                                                                         *
+ *  Each team will have a MissionTarget and an temporary Target override.  *
+ *  The overrides are generally stuff that shoots at the Team, but for     *
+ *  this function can also be a blocking Wall.                             *
+ *                                                                         *
+ *       #MinorAIFixes                                                     *
+ *                                                                         *
+ * INPUT:	none														   *
+ *                                                                         *
+ * OUTPUT: none									                           *
+ *                                                                         *
+ * WARNINGS:                                                               *
+ *                                                                         *
+ * HISTORY:                                                                *
+ *   20/05/2021 Created.	                                               *
+ *=========================================================================*/
+void TeamClass::Coordinate_Target(TARGET newtarget)
+{
+	Validate();
+	Target = newtarget;
 }

@@ -237,6 +237,8 @@ class FootClass :	public TechnoClass
 		virtual void Sell_Back(int control);
 		virtual int Offload_Tiberium_Bail(void);
 		virtual TARGET Greatest_Threat(ThreatType method) const;
+// #MinorAIFixes				
+		TARGET Greatest_Threat_Wall(ThreatType method, bool adjacent) const;
 		virtual void Detach(TARGET target, bool all);
 		virtual void Detach_All(bool all=true);
 		virtual void Assign_Mission(MissionType order);
@@ -248,6 +250,8 @@ class FootClass :	public TechnoClass
 		virtual int Mission_Hunt(void);
 		virtual int Mission_Timed_Hunt(void);
 		virtual int Mission_Guard_Area(void);
+// #MinorAIFixes		
+		bool Verify_Attack_Walls(bool speedcheck);
 
 		/*
 		**	Scenario and debug support.

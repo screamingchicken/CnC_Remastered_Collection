@@ -188,26 +188,26 @@ void InfantryClass::Debug_Dump(MonoClass *mono) const
 {
 	Validate();
 	mono->Set_Cursor(0, 0);mono->Print(
-		"ÃšName:Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã‚Mission:Ã„Ã„Ã„Ã‚TarCom:Ã‚NavCom:Ã‚Radio:Ã‚Coord:Ã„Ã„Ã‚HeadTo:Ã„Ã‚St:Ã„Â¿\n"
-		"Â³                   Â³           Â³       Â³       Â³      Â³        Â³        Â³    Â³\n"
-		"ÃƒÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã‚NÃ‚YÃ‚Health:Ã„Ã‚Body:Ã‚Turret:Ã‚Speed:Ã‚Path:ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã‚Cargo:Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Â´\n"
-		"Â³Active........Â³ Â³ Â³        Â³     Â³       Â³      Â³            Â³               Â³\n"
-		"Â³Limbo.........Â³ Â³ ÃƒÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Â´\n"
-		"Â³Owned.........Â³ Â³ Â³Last Message:                                             Â³\n"
-		"Â³Discovered....Â³ Â³ ÃƒTimer:Ã‚Arm:Ã‚Track:Ã‚Tiberium:Ã‚Flash:Ã‚Stage:Ã‚Team:Ã„Ã„Ã„Ã„Ã‚Arch:Â´\n"
-		"Â³Selected......Â³ Â³ Â³      Â³    Â³      Â³         Â³      Â³      Â³         Â³     Â³\n"
-		"Â³Teathered.....Â³ Â³ ÃƒÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã„Ã™\n"
-		"Â³Locked on Map.Â³ Â³ Â³                                                           \n"
-		"Â³Is Prone......Â³ Â³ Â³                                                           \n"
-		"Â³Is A Loner....Â³ Â³ Â³                                                           \n"
-		"Â³Deploying.....Â³ Â³ Â³                                                           \n"
-		"Â³Rotating......Â³ Â³ Â³                                                           \n"
-		"Â³Firing........Â³ Â³ Â³                                                           \n"
-		"Â³Driving.......Â³ Â³ Â³                                                           \n"
-		"Â³To Look.......Â³ Â³ Â³                                                           \n"
-		"Â³Recoiling.....Â³ Â³ Â³                                                           \n"
-		"Â³To Display....Â³ Â³ Â³                                                           \n"
-		"Ã€Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„ÃÃ„ÃÃ„Ã™                                                           \n");
+		"ÚName:ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂMission:ÄÄÄÂTarCom:ÂNavCom:ÂRadio:ÂCoord:ÄÄÂHeadTo:ÄÂSt:Ä¿\n"
+		"³                   ³           ³       ³       ³      ³        ³        ³    ³\n"
+		"ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂNÂYÂHealth:ÄÂBody:ÂTurret:ÂSpeed:ÂPath:ÁÄÄÄÄÄÄÂCargo:ÄÄÄÄÁÄÄÄÄ´\n"
+		"³Active........³ ³ ³        ³     ³       ³      ³            ³               ³\n"
+		"³Limbo.........³ ³ ÃÄÄÄÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
+		"³Owned.........³ ³ ³Last Message:                                             ³\n"
+		"³Discovered....³ ³ ÃTimer:ÂArm:ÂTrack:ÂTiberium:ÂFlash:ÂStage:ÂTeam:ÄÄÄÄÂArch:´\n"
+		"³Selected......³ ³ ³      ³    ³      ³         ³      ³      ³         ³     ³\n"
+		"³Teathered.....³ ³ ÃÄÄÄÄÄÄÁÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÙ\n"
+		"³Locked on Map.³ ³ ³                                                           \n"
+		"³Is Prone......³ ³ ³                                                           \n"
+		"³Is A Loner....³ ³ ³                                                           \n"
+		"³Deploying.....³ ³ ³                                                           \n"
+		"³Rotating......³ ³ ³                                                           \n"
+		"³Firing........³ ³ ³                                                           \n"
+		"³Driving.......³ ³ ³                                                           \n"
+		"³To Look.......³ ³ ³                                                           \n"
+		"³Recoiling.....³ ³ ³                                                           \n"
+		"³To Display....³ ³ ³                                                           \n"
+		"ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÁÄÙ                                                           \n");
 	mono->Set_Cursor(1, 1);mono->Printf("%s:%s", House->Class->IniName, Class->IniName);
 	mono->Text_Print("X", 16 + (IsProne?2:0), 10);
 	mono->Set_Cursor(33, 7);mono->Printf("%2d", Fear);
@@ -1334,6 +1334,8 @@ void InfantryClass::AI(void)
 					**	aborted.
 					*/
 					if (!PathDelay.Expired()) {
+						// #MinorAIFixes - check if we're in a Team and are stuck on an enemy Wall.
+						Attack_Walls();
 						return;
 					}
 					if (!Basic_Path()) {
@@ -1469,6 +1471,7 @@ void InfantryClass::AI(void)
 		}
 		IsNewNavCom = false;
 	}
+
 }
 
 
@@ -1588,14 +1591,29 @@ MoveType InfantryClass::Can_Enter_Cell(CELL cell, FacingType ) const
 	**	in it.
 	*/
 	if (cellptr->Overlay != OVERLAY_NONE) {
-		OverlayTypeClass const & otype = OverlayTypeClass::As_Reference(cellptr->Overlay);
+		OverlayTypeClass const * optr = &OverlayTypeClass::As_Reference(cellptr->Overlay);
 
-		if (otype.IsCrate && !House->IsHuman) {
+		if (optr->IsCrate && !House->IsHuman) {
 			return(MOVE_NO);
 		}
+		// #MinorAIFixes - Allow Infantry with correct weapons to pathfind through destroyable Walls.
+		if (optr->IsWall) {
+			if (Class->Primary != WEAPON_NONE) {
+				WarheadTypeClass const * whead = &Warheads[BulletTypeClass::As_Reference(Weapons[Class->Primary].Fires).Warhead];
 
-		if (otype.IsWall) {
-			if ((cellptr->OverlayData / 16) != otype.DamageLevels) {
+				if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)) {
+					if (!House->IsHuman && !House->Is_Ally(cellptr->Owner) && !(cellptr->Owner == HOUSE_NONE)) {
+						return(MOVE_DESTROYABLE);
+					}
+					else {
+						return(MOVE_NO);
+					}
+				}
+				else {
+					return(MOVE_NO);
+				}
+			}
+			else {
 				return(MOVE_NO);
 			}
 		}
@@ -3382,6 +3400,67 @@ int InfantryClass::Mission_Attack(void)
 	return(FootClass::Mission_Attack());
 }
 
+/***********************************************************************************************
+ * InfantryClass::Attack_Walls -- Infantry in a Team check if they can attack nearby Walls	   *
+ *                                                                                             *
+ *    This handling is separate to the Guard/Hunt handling as that works just fine as part of  *
+ *    normal targetting. This is to check if Infantry in a Team are stuck on an enemy Wall     *
+ *    they can attack.												                           *
+ *                                                                                             *
+ *     #MinorAIFixes                                                                           *
+ *                                                                                             *
+ * INPUT:   none                                                                               *
+ *                                                                                             *
+ * OUTPUT:  none																			   *
+ *                                                                                             *
+ * WARNINGS:   none                                                                            *
+ *                                                                                             *
+ * HISTORY:                                                                                    *
+ *   22/05/2021 Created.												                       *
+ *=============================================================================================*/
+void InfantryClass::Attack_Walls(void)
+{
+	Validate();
+
+// Is the Infantry on-map, in a Team, is AI, is stopped and is out of range of it's Target?
+	if (Map.In_Radar(Coord_Cell(Coord)) && Team && !House->IsHuman && Doing == DO_STAND_READY && !In_Range(TarCom)) {
+		if (!StoppedInfantry) {
+			StoppedInfantry = true;
+			LastFrame = Frame;
+		}
+
+		// Check if they're still stuck 2 seconds later.	
+		if (StoppedInfantry && Frame > LastFrame + 64) {
+			CCDebugString("InfantryAI - Stopped Infantry in a Team - have waited \n");
+			switch (Team->What_Team_Mission()) {
+			case TMISSION_ATTACKBASE:
+			case TMISSION_ATTACKUNITS:
+			case TMISSION_ATTACKCIVILIANS:
+			case TMISSION_RAMPAGE:
+			case TMISSION_ATTACKTARCOM:
+			case TMISSION_MOVE:
+			case TMISSION_MOVECELL:
+				// Team is on an offensive/move Mission, check if there is a Wall to attack.
+				if (((TechnoClass *)this)->Verify_Attack_Walls(true)) {
+					CCDebugString("InfantryAI - Assigning Wall Target \n");
+
+					TARGET TempTarget = Greatest_Threat_Wall(THREAT_RANGE, true);
+					Assign_Target(TempTarget);
+					Team->Coordinate_Target(TempTarget);
+					Mission_Attack();
+
+					StoppedInfantry = false;
+				}
+				break;
+				// Team is not on an offensive Mission.
+			default:
+				break;
+			}
+		}
+
+	}
+
+}
 
 RTTIType InfantryClass::What_Am_I(void) const
 {

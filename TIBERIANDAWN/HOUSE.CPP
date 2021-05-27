@@ -465,6 +465,8 @@ HouseClass::HouseClass(HousesType house) :
 	SpecialFactory = -1;
 	TeamTime = TEAM_DELAY;
 	Tiberium = 0;
+	// #MinorAIFixes
+	TotalHarvested = 0;
 	TriggerTime = 0;
 	UnitFactories = 0;
 	UnitFactory = -1;
@@ -950,7 +952,7 @@ void HouseClass::AI(void)
 	if (Frame < 2 && this->Class->House == HOUSE_MULTI6) { CCDebugString("House AI - This is HOUSE_MULTI6 \n"); }
 
 	if (IsHuman && Frame == 20) {
-		On_Message("Minor AI Improvements AI v1.4", 5.0f, -1);
+		On_Message("Minor AI Improvements AI v1.5", 5.0f, -1);
 	}
 
 #ifdef USE_RA_AI
@@ -1616,7 +1618,7 @@ void HouseClass::AI(void)
 		
 		if ((Frame / 1942) > LastDebug && Drain > 0 ) {
 			char var1[256];
-			sprintf(var1, "%d min \t pow=%d \t drain=%d \t money=%d \t cap=%d \n", Frame/(1942), Power, Drain, Tiberium + Credits, Capacity);
+			sprintf(var1, "%d min \t pow=%d \t drain=%d \t money=%d \t cap=%d \t tibrate=%d \n", Frame/(1942), Power, Drain, Tiberium + Credits, Capacity, TotalHarvested / (Frame / (1942)));
 			CCDebugString(var1);
 			sprintf(var1, "%d min \t maxunit=%d \t maxinfantry=%d \t maxbuilding=%d \n", Frame / (1942), MaxUnit, MaxInfantry, MaxBuilding);
 			CCDebugString(var1);
@@ -1763,6 +1765,7 @@ void HouseClass::Harvested(unsigned tiberium)
 	long oldtib = Tiberium;
 
 	Tiberium += tiberium;
+	TotalHarvested += tiberium;
 	if (Tiberium > Capacity) {
 		Tiberium = Capacity;
 		IsMaxedOut = true;
@@ -5950,7 +5953,7 @@ bool HouseClass::AI_Attack(UrgencyType )
 	CELL rallypoint;
 
 	if (Enemy == HOUSE_GOOD && CurUnits > 0) { CCDebugString("AI_Attack - Enemy is HOUSE_GOOD \n"); }
-	if (Enemy == HOUSE_BAD && CurUnits > 0) { CCDebugString("AI_Attack - Enemy is HOUSE_GOOD \n"); }
+	if (Enemy == HOUSE_BAD && CurUnits > 0) { CCDebugString("AI_Attack - Enemy is HOUSE_BAD \n"); }
 	if (Enemy == HOUSE_NEUTRAL && CurUnits > 0) { CCDebugString("AI_Attack - Enemy is HOUSE_NEUTRAL \n"); }
 	if (Enemy >= HOUSE_MULTI1 && Enemy <= HOUSE_MULTI6 && CurUnits > 0) {
 		CCDebugString("AI_Attack - Enemy is a Multi-House \n");

@@ -291,6 +291,8 @@ class HouseClass {
 		long Credits;
 		long InitialCredits;
 		long Capacity;
+		// #MinorAIFixes - used to record how much Tib has been pulled in for metrics.		
+		long TotalHarvested;
 
 		/*
 		** Did this house lose via resignation?

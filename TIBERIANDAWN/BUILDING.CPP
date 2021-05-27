@@ -1162,9 +1162,10 @@ void BuildingClass::AI(void)
 		/*
 		**	Possibly start repair process if the building is below a set strength.
 		*/
-		int ratio = 0x0040;		// 64 aka 25%
-		if (Scenario > 6) ratio = 0x0080;	// 128 aka 50%
-		if (Scenario > 10) ratio = 0x00C0;	// 192 aka 75%
+		int ratio = 0x00E6;		//Custom maps = 230 aka 90%
+		if (Scenario <= 6) ratio = 0x0040;	// 64 aka 25%
+		if (Scenario > 6) ratio = 0x00C0;	// 192 aka 75%
+		if (Scenario > 10) ratio = 0x00C0;	// 230 aka 90%
 		if (GameToPlay != GAME_NORMAL) ratio = 0x00E6;	//Skirmish = 230 aka 90%
 
 		if (Class->IsRepairable && Health_Ratio() <= (unsigned) ratio) {

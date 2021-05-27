@@ -178,6 +178,10 @@ class InfantryClass : public FootClass
 		void  Set_Occupy_Bit(CELL cell, int spot_index);
 		void  Clear_Occupy_Bit(COORDINATE coord) {Clear_Occupy_Bit(Coord_Cell(coord), CellClass::Spot_Index(coord));};
 		void  Clear_Occupy_Bit(CELL cell, int spot_index);
+		// #MinorAIFixes - timer for Units stuck on walls
+		int LastFrame = 0;
+		bool StoppedInfantry = false;
+		void Attack_Walls(void);
 
 		/*
 		**	Driver control support functions. These are used to control cell

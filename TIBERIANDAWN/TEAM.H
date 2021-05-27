@@ -172,8 +172,10 @@ class TeamClass : public AbstractClass
 		static void * operator new(size_t size);
 		static void Init(void);
 		static void Suspend_Teams(int priority);
-
 		TARGET As_Target(void) const;
+		// #MinorAIFixes
+		TeamMissionType What_Team_Mission(void);
+		void Coordinate_Target(TARGET newtarget);
 
 		/*
 		**	File I/O.

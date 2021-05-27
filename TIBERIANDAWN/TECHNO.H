@@ -266,7 +266,9 @@ class TechnoClass :	public RadioClass,
 		void  Kill_Cargo(TechnoClass * source);
 		virtual void Record_The_Kill(TechnoClass * source);
 		virtual bool Target_Something_Nearby(ThreatType threat=THREAT_NORMAL);
+// #MinorAIFixes
 		virtual bool Target_Something_Nearby_Hunt(ThreatType threat=THREAT_NORMAL);
+		bool Verify_Attack_Walls(bool speedcheck);
 		virtual void Stun(void);
 		virtual bool In_Range(COORDINATE coord, int which=0) const;
 		virtual bool In_Range(TARGET target, int which=0, bool reciprocal_check = true) const;
@@ -274,6 +276,8 @@ class TechnoClass :	public RadioClass,
 		virtual void Death_Announcement(TechnoClass const * source=0) const = 0;
 		virtual FireErrorType Can_Fire(TARGET target, int which=0) const;
 		virtual TARGET Greatest_Threat(ThreatType threat) const;
+// #MinorAIFixes
+		virtual TARGET Greatest_Threat_Wall(ThreatType method, bool adjacent) const;
 		virtual void Assign_Target(TARGET target);
 		virtual void Override_Mission(MissionType mission, TARGET tarcom, TARGET navcom);
 		virtual bool Restore_Mission(void);
@@ -282,6 +286,8 @@ class TechnoClass :	public RadioClass,
 		virtual bool Captured(HouseClass * newowner);
 		virtual ResultType Take_Damage(int & damage, int distance, WarheadType warhead, TechnoClass * source);
 		bool Evaluate_Cell(ThreatType method, int mask, CELL cell, int range, TechnoClass const ** object, int & value) const;
+// #MinorAIFixes
+		bool Evaluate_Cell_For_Wall(CELL cell) const;
 		bool Evaluate_Object(ThreatType method, int mask, int range, TechnoClass const * object, int & value) const;
 		bool Is_Cloaked(HousesType house) const;
 		bool Is_Cloaked(HouseClass const * house) const;

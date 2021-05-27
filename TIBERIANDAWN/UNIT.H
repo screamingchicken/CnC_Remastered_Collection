@@ -139,6 +139,9 @@ class UnitClass :	public TarComClass
 		virtual ResultType Take_Damage(int & damage, int distance, WarheadType warhead, TechnoClass * source=0);
 		virtual TARGET As_Target(void) const;
 		virtual void Stun(void);
+		// #MinorAIFixes - timer for Units stuck on walls
+		int LastFrame = 0;
+		bool StoppedUnit = false;
 
 		/*
 		**	Driver control support functions. These are used to control cell

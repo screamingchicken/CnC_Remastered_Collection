@@ -515,6 +515,50 @@ void UnitClass::AI(void)
 		Do_Shimmer();
 	}
 
+	/*
+	**  #MinorAIFixes
+	**	Check if this is a Unit in a Team on an offensive/move Mission and is stuck on a Wall.
+	**  Guard/Area Guard/Hunt checking for this is performed under their targetting sections.
+	*/
+
+	// Is the Unit on-map, in a Team, is AI, is stopped and is out of range of it's Target?
+	if (Map.In_Radar(Coord_Cell(Coord)) && Team && !House->IsHuman && Speed == 0 && !In_Range(TarCom)) {
+		if (!StoppedUnit) {
+			StoppedUnit = true;
+			LastFrame = Frame;
+		}
+
+	// Check if they're still stuck 2 seconds later.	
+		if (StoppedUnit && Frame > LastFrame + 64) {
+			CCDebugString("UnitAI - Stopped Unit in a Team \n");
+			switch (Team->What_Team_Mission()) {
+			case TMISSION_ATTACKBASE:
+			case TMISSION_ATTACKUNITS:
+			case TMISSION_ATTACKCIVILIANS:
+			case TMISSION_RAMPAGE:
+			case TMISSION_ATTACKTARCOM:
+			case TMISSION_MOVE:
+			case TMISSION_MOVECELL:
+				// Team is on an offensive/move Mission, check if there is a Wall to attack.
+				if (((TechnoClass *)this)->Verify_Attack_Walls(true)) {
+					CCDebugString("UnitAI - Assigning Wall Target \n");
+					
+					TARGET TempTarget = Greatest_Threat_Wall(THREAT_NORMAL, true);
+					Assign_Target(TempTarget);
+					Team->Coordinate_Target(TempTarget);
+					Mission_Attack();
+
+					StoppedUnit = false;
+				}
+				break;
+				// Team is not on an offensive Mission.
+			default:
+				break;
+			}
+		}
+
+	}
+
 }
 
 
@@ -1185,7 +1229,7 @@ UnitClass::~UnitClass(void)
 
 		Limbo();
 	}
-	if (GameActive && Team) Team->Remove(this);
+	if (GameActive && Team) Team->Remove(this); 
 }
 
 
@@ -3191,7 +3235,8 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType ) const
 				WarheadTypeClass const * whead = &Warheads[BulletTypeClass::As_Reference(Weapons[Class->Primary].Fires).Warhead];
 
 				if (whead->IsWallDestroyer || (whead->IsWoodDestroyer && optr->IsWooden)) {
-					if (!House->IsHuman && !House->Is_Ally(cellptr->Owner)) {
+					// #MinorAIFixes - Don't pathfind through neutral Walls.
+					if (!House->IsHuman && !House->Is_Ally(cellptr->Owner) && !(cellptr->Owner == HOUSE_NONE)) {
 						if (retval < MOVE_DESTROYABLE) retval = MOVE_DESTROYABLE;
 					} else {
 						return(MOVE_NO);
@@ -3212,7 +3257,13 @@ MoveType UnitClass::Can_Enter_Cell(CELL cell, FacingType ) const
 #ifdef ADVANCED
 	if (retval != MOVE_DESTROYABLE && !Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
 #else
-	if (!Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
+	/*
+	** #MinorAIFixes - If the Overlay is Destroyable, then don't check movement cost.
+	** This looks messy because they had an unsused #define here.
+	*/
+
+	//if (!Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
+	if (retval != MOVE_DESTROYABLE && !Ground[cellptr->Land_Type()].Cost[Class->Speed]) {
 #endif
 		return(MOVE_NO);
 	}

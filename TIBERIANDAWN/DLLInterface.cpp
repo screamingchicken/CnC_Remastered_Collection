@@ -1620,8 +1620,9 @@ extern "C" __declspec(dllexport) bool __cdecl CNC_Advance_Instance(uint64 player
 
 	/*
 	** Very rarely, the human players will get a message from the computer.
+	** #MinorAIFixes - Reduce the level of computer snark by 10.
 	*/
-	if (GameToPlay != GAME_NORMAL && MPlayerGhosts && IRandom(0,10000) == 1) {
+	if (GameToPlay != GAME_NORMAL && MPlayerGhosts && IRandom(0,100000) == 1) {
 		DLLExportClass::Computer_Message(false);
 	}
 
